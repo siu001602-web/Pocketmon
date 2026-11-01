@@ -12,25 +12,50 @@ st.set_page_config(
 
 # --- 카드 데이터베이스 ---
 CARD_DATABASE = [
-    # C (일반 카드)
+    # --- 일반 팩 및 기본 카드군 ---
     {"id": "cm1", "name": "루나톤 (일반)", "rarity": "C", "type": "🔮 초", "hp": 90, "img": "Screenshot_20261101_182203_NAVER.jpg", "desc": "달빛을 모아 에너지를 발산하는 포켓몬."},
     {"id": "cm2", "name": "솔록 (일반)", "rarity": "C", "type": "🔥 불꽃", "hp": 90, "img": "Screenshot_20261101_182236_NAVER.jpg", "desc": "태양의 열기를 담아 주변을 따뜻하게 만드는 포켓몬."},
     
-    # R (레어 카드)
     {"id": "rm1", "name": "블래키", "rarity": "R", "type": "🌑 악", "hp": 110, "img": "Screenshot_20261101_183128_NAVER.jpg", "desc": "달빛을 받으면 온몸의 노란 고리 문양이 빛난다."},
     {"id": "rm2", "name": "불카모스", "rarity": "R", "type": "🔥 불꽃", "hp": 130, "img": "Screenshot_20261101_183155_NAVER.jpg", "desc": "불타는 날개에서 수많은 화염 가루를 흩뿌린다."},
     {"id": "rm3", "name": "루나아라", "rarity": "R", "type": "🔮 초", "hp": 150, "img": "Screenshot_20261101_183235_NAVER.jpg", "desc": "밤하늘의 빛을 흡수하여 날개를 펼치는 전설의 포켓몬."},
     {"id": "rm4", "name": "솔가레오", "rarity": "R", "type": "⚔️ 강철", "hp": 150, "img": "Screenshot_20261101_183241_NAVER.jpg", "desc": "태양의 에너지를 품고 당당하게 달리는 전설의 포켓몬."},
 
-    # RR (더블 레어 카드)
     {"id": "rrm1", "name": "불카모스 V", "rarity": "RR", "type": "🔥 불꽃", "hp": 220, "img": "Screenshot_20261101_183206_NAVER.jpg", "desc": "강렬한 화염의 힘을 두른 강력한 모습의 불카모스 V."},
 
-    # UR (울트라 레어 카드 - 0.1%)
     {"id": "urm1", "name": "솔가레오 V (울트라레어)", "rarity": "UR", "type": "⚔️ 강철", "hp": 240, "img": "Screenshot_20261101_183221_NAVER.jpg", "desc": "태양의 빛을 극한으로 끌어올린 초희귀 솔가레오."},
 
-    # SPECIAL ART (SAR - 특일 카드 - 0.001%)
     {"id": "sm13", "name": "솔록 V (특일)", "rarity": "SPECIAL", "type": "🔮 초", "hp": 210, "img": "file_00000000ad388206a3a6a269b5b4726d.png", "desc": "상대의 포켓몬 전원에게 각각 10데미지를 준다. (Illus. Siu)"},
-    {"id": "sm14", "name": "루나톤 V (특일)", "rarity": "SPECIAL", "type": "🔮 초", "hp": 210, "img": "Screenshot_20261101_144113_ChatGPT.jpg", "desc": "상대의 배틀 포켓몬을 혼란시킨다. (Illus. Siu)"}
+    {"id": "sm14", "name": "루나톤 V (특일)", "rarity": "SPECIAL", "type": "🔮 초", "hp": 210, "img": "Screenshot_20261101_144113_ChatGPT.jpg", "desc": "상대의 배틀 포켓몬을 혼란시킨다. (Illus. Siu)"},
+
+    # --- 프로모 팩 전용 신규 카드군 (AR / GX) ---
+    {
+        "id": "promo_ar_sol", 
+        "name": "솔록 (AR)", 
+        "rarity": "AR", 
+        "type": "🔥 불꽃", 
+        "hp": 120, 
+        "img": "Screenshot_20261101_193947_NAVER.jpg", 
+        "desc": "프로모 팩 전용 아트페어 솔록."
+    },
+    {
+        "id": "promo_ar_luna", 
+        "name": "루나톤 (AR)", 
+        "rarity": "AR", 
+        "type": "🔮 초", 
+        "hp": 120, 
+        "img": "Screenshot_20261101_193934_NAVER.jpg", 
+        "desc": "프로모 팩 전용 아트페어 루나톤."
+    },
+    {
+        "id": "promo_gx_espeon", 
+        "name": "에스페온 GX", 
+        "rarity": "GX", 
+        "type": "🔮 초", 
+        "hp": 200, 
+        "img": "Screenshot_20261101_194118_NAVER.jpg", 
+        "desc": "프로모 팩 전용 초희귀 에스페온 GX."
+    }
 ]
 
 # --- 세션 상태 초기화 ---
@@ -49,24 +74,32 @@ if "current_pack_type" not in st.session_state:
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = [False, False, False, False, False]
 
-# --- 가챠 확률 뽑기 로직 ---
+# --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
     rand = random.random()
     
-    special_rate = 0.0001 if is_promo else 0.00001
-    ur_rate = 0.005 if is_promo else 0.001
-    
-    if rand < special_rate:
-        pool = [c for c in CARD_DATABASE if c["rarity"] == "SPECIAL"]
-    elif rand < ur_rate:
-        pool = [c for c in CARD_DATABASE if c["rarity"] == "UR"]
-    elif rand < (0.15 if is_promo else 0.075):
-        pool = [c for c in CARD_DATABASE if c["rarity"] == "RR"]
-    elif rand < (0.50 if is_promo else 0.345):
-        pool = [c for c in CARD_DATABASE if c["rarity"] == "R"]
+    if is_promo:
+        # 프로모 팩 전용 확률 (GX 2%, AR 98%)
+        if rand < 0.02:
+            pool = [c for c in CARD_DATABASE if c["rarity"] == "GX"]
+        else:
+            pool = [c for c in CARD_DATABASE if c["rarity"] == "AR"]
     else:
-        pool = [c for c in CARD_DATABASE if c["rarity"] == "C"]
-    
+        # 일반 팩 확률
+        special_rate = 0.00001
+        ur_rate = 0.001
+        
+        if rand < special_rate:
+            pool = [c for c in CARD_DATABASE if c["rarity"] == "SPECIAL"]
+        elif rand < ur_rate:
+            pool = [c for c in CARD_DATABASE if c["rarity"] == "UR"]
+        elif rand < 0.075:
+            pool = [c for c in CARD_DATABASE if c["rarity"] == "RR"]
+        elif rand < 0.345:
+            pool = [c for c in CARD_DATABASE if c["rarity"] == "R"]
+        else:
+            pool = [c for c in CARD_DATABASE if c["rarity"] == "C"]
+            
     if not pool:
         pool = [c for c in CARD_DATABASE if c["rarity"] == "C"]
         
@@ -90,7 +123,7 @@ def open_pack_from_bag(pack_type="normal"):
         st.session_state.stats["cards"] += 1
         st.session_state.inventory[card["id"]] = st.session_state.inventory.get(card["id"], 0) + 1
         
-        if card["rarity"] in ["SPECIAL", "UR"]:
+        if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
             st.session_state.stats["special"] += 1
             has_special = True
             
@@ -109,7 +142,7 @@ with st.sidebar:
     st.markdown("### 📊 수집 통계")
     st.write(f"📦 개봉한 팩 수: **{st.session_state.stats['packs']}**")
     st.write(f"🃏 전체 보유 카드: **{st.session_state.stats['cards']}**")
-    st.write(f"✨ 특일/UR 획득: **{st.session_state.stats['special']}**")
+    st.write(f"✨ 희귀 카드 획득: **{st.session_state.stats['special']}**")
     
     st.divider()
     st.markdown("### 💾 데이터 관리 (Save/Load)")
@@ -145,7 +178,7 @@ tab1, tab2, tab3 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 
 # --- 탭 1: 상점 ---
 with tab1:
     st.subheader("🏪 상점")
-    st.caption("버튼을 누르면 3개의 미스터리 구역 상자가 나타납니다. (각 상자당 90% 일반 팩 / 10% 프로모 팩)")
+    st.caption("버튼을 누르면 3개의 미스터리 구역 상자가 나타납니다. (90% 일반 팩 / 10% 프로모 팩)")
     
     if st.button("🎲 상점 열기 (상자 3개 불러오기)", type="primary", use_container_width=True):
         boxes = []
@@ -169,7 +202,6 @@ with tab1:
                 st.markdown(f"#### 📍 구역 #{idx + 1}")
                 if not box["bought"]:
                     try:
-                        # 10% 확률인 프로모 팩이면 프로모 이미지, 아니면 일반 팩 이미지 출력
                         img_file = "file_00000000de388206bbea5cdf416bbe01.png" if is_promo else "file_0000000056108206b69dcbce0d79c3bb.png"
                         st.image(img_file, use_container_width=True)
                     except:
@@ -243,13 +275,14 @@ with tab2:
                     
                     if st.button(f"뒤집기 #{idx+1}", key=f"card_btn_{idx}", use_container_width=True):
                         st.session_state.flipped_status[idx] = True
-                        if card["rarity"] in ["SPECIAL", "UR"]:
+                        if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
                             st.balloons()
                         st.rerun()
                 else:
                     rarity_color = {
                         "C": "gray", "R": "blue", "RR": "violet", 
-                        "UR": "orange", "SPECIAL": "red"
+                        "UR": "orange", "SPECIAL": "red", 
+                        "AR": "green", "GX": "gold"
                     }.get(card["rarity"], "gray")
                     
                     st.image(card["img"], use_container_width=True)
@@ -276,4 +309,4 @@ with tab3:
             else:
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
-                st.caption("🔒 상자에서 획득하세요")
+                st.caption("🔒 팩에서 획득하세요")
