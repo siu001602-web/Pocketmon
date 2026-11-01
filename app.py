@@ -11,8 +11,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 카드 데이터베이스 ---
+# --- 카드 데이터베이스 (레어, 더블레어, 울트라레어, 특일 포함) ---
 CARD_DATABASE = [
+    # C (일반 카드)
     {
         "id": "cm1", 
         "name": "루나톤 (일반)", 
@@ -31,6 +32,68 @@ CARD_DATABASE = [
         "img": "Screenshot_20261101_182236_NAVER.jpg", 
         "desc": "태양의 열기를 담아 주변을 따뜻하게 만드는 포켓몬."
     },
+    
+    # R (레어 카드)
+    {
+        "id": "rm1", 
+        "name": "블래키", 
+        "rarity": "R", 
+        "type": "🌑 악", 
+        "hp": 110, 
+        "img": "Screenshot_20261101_183128_NAVER.jpg", 
+        "desc": "달빛을 받으면 온몸의 노란 고리 문양이 빛난다."
+    },
+    {
+        "id": "rm2", 
+        "name": "불카모스", 
+        "rarity": "R", 
+        "type": "🔥 불꽃", 
+        "hp": 130, 
+        "img": "Screenshot_20261101_183155_NAVER.jpg", 
+        "desc": "불타는 날개에서 수많은 화염 가루를 흩뿌린다."
+    },
+    {
+        "id": "rm3", 
+        "name": "루나아라", 
+        "rarity": "R", 
+        "type": "🔮 초", 
+        "hp": 150, 
+        "img": "Screenshot_20261101_183235_NAVER.jpg", 
+        "desc": "밤하늘의 빛을 흡수하여 날개를 펼치는 전설의 포켓몬."
+    },
+    {
+        "id": "rm4", 
+        "name": "솔가레오", 
+        "rarity": "R", 
+        "type": "⚔️ 강철", 
+        "hp": 150, 
+        "img": "Screenshot_20261101_183241_NAVER.jpg", 
+        "desc": "태양의 에너지를 품고 당당하게 달리는 전설의 포켓몬."
+    },
+
+    # RR (더블 레어 카드)
+    {
+        "id": "rrm1", 
+        "name": "불카모스 V", 
+        "rarity": "RR", 
+        "type": "🔥 불꽃", 
+        "hp": 220, 
+        "img": "Screenshot_20261101_183206_NAVER.jpg", 
+        "desc": "강렬한 화염의 힘을 두른 강력한 모습의 불카모스 V."
+    },
+
+    # UR (울트라 레어 카드 - 특일보다 낮은 확률)
+    {
+        "id": "urm1", 
+        "name": "솔가레오 V (울트라레어)", 
+        "rarity": "UR", 
+        "type": "⚔️ 강철", 
+        "hp": 240, 
+        "img": "Screenshot_20261101_183221_NAVER.jpg", 
+        "desc": "태양의 빛을 극한으로 끌어올린 초희귀 솔가레오."
+    },
+
+    # SPECIAL ART (SAR - 특일 카드)
     {
         "id": "sm13", 
         "name": "솔록 V (특일)", 
@@ -55,7 +118,7 @@ CARD_DATABASE = [
 if "inventory" not in st.session_state:
     st.session_state.inventory = {}
 if "stats" not in st.session_state:
-    st.session_state.stats = {"packs": 0, "cards": 0, "ur": 0, "special": 0}
+    st.session_state.stats = {"packs": 0, "cards": 0, "special": 0}
 if "current_pack" not in st.session_state:
     st.session_state.current_pack = []
 if "flipped_status" not in st.session_state:
@@ -64,13 +127,19 @@ if "flipped_status" not in st.session_state:
 # --- 가챠 확률 뽑기 로직 ---
 def draw_single_card():
     rand = random.random()
-    if rand < 0.01:
+    if rand < 0.005:  # 특일 (0.5%)
         pool = [c for c in CARD_DATABASE if c["rarity"] == "SPECIAL"]
-    else:
+    elif rand < 0.015:  # UR (1%) - 특일보다 낮거나 비슷하게 설정
+        pool = [c for c in CARD_DATABASE if c["rarity"] == "UR"]
+    elif rand < 0.08:  # RR (6.5%)
+        pool = [c for c in CARD_DATABASE if c["rarity"] == "RR"]
+    elif rand < 0.35:  # R (27%)
+        pool = [c for c in CARD_DATABASE if c["rarity"] == "R"]
+    else:  # C (나머지 일반)
         pool = [c for c in CARD_DATABASE if c["rarity"] == "C"]
     
     if not pool:
-        pool = CARD_DATABASE
+        pool = [c for c in CARD_DATABASE if c["rarity"] == "C"]
         
     return random.choice(pool)
 
@@ -85,7 +154,7 @@ def open_one_pack():
         st.session_state.stats["cards"] += 1
         st.session_state.inventory[card["id"]] = st.session_state.inventory.get(card["id"], 0) + 1
         
-        if card["rarity"] == "SPECIAL":
+        if card["rarity"] == "SPECIAL" or card["rarity"] == "UR":
             st.session_state.stats["special"] += 1
             has_special = True
             
@@ -99,7 +168,7 @@ with st.sidebar:
     st.markdown("### 📊 수집 통계")
     st.write(f"📦 개봉한 팩 수: **{st.session_state.stats['packs']}**")
     st.write(f"🃏 전체 보유 카드: **{st.session_state.stats['cards']}**")
-    st.write(f"✨ 특일(SAR) 획득: **{st.session_state.stats['special']}")
+    st.write(f"✨ 특일/UR 획득: **{st.session_state.stats['special']}")
     
     st.divider()
     st.markdown("### 💾 데이터 관리 (Save/Load)")
@@ -121,7 +190,7 @@ with st.sidebar:
         try:
             loaded_data = json.load(uploaded_file)
             st.session_state.inventory = loaded_data.get("inventory", {})
-            st.session_state.stats = loaded_data.get("stats", {"packs": 0, "cards": 0, "ur": 0, "special": 0})
+            st.session_state.stats = loaded_data.get("stats", {"packs": 0, "cards": 0, "special": 0})
             st.success("데이터를 성공적으로 불러왔습니다!")
             st.rerun()
         except Exception as e:
@@ -160,20 +229,21 @@ with tab1:
                 is_flipped = st.session_state.flipped_status[idx]
                 
                 if not is_flipped:
-                    # 뒷면 이미지 출력
                     try:
                         st.image("Screenshot_20261101_181901_NAVER.jpg", use_column_width=True)
                     except:
                         st.write(f"카드 #{idx+1} [뒷면]")
                     
-                    # 뒷면 이미지 아래에 배치된 뒤집기 버튼
                     if st.button(f"뒤집기 #{idx+1}", key=f"card_btn_{idx}", use_container_width=True):
                         st.session_state.flipped_status[idx] = True
-                        if card["rarity"] == "SPECIAL":
+                        if card["rarity"] in ["SPECIAL", "UR"]:
                             st.balloons()
                         st.rerun()
                 else:
-                    rarity_color = "red" if card["rarity"] == "SPECIAL" else "gray"
+                    rarity_color = {
+                        "C": "gray", "R": "blue", "RR": "violet", 
+                        "UR": "orange", "SPECIAL": "red"
+                    }.get(card["rarity"], "gray")
                     
                     st.image(card["img"], use_column_width=True)
                     st.markdown(f"")
