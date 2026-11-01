@@ -82,7 +82,7 @@ if "active_cutscene" not in st.session_state:
 if "card_best_grades" not in st.session_state:
     st.session_state.card_best_grades = {}
 if "last_batch_results" not in st.session_state:
-    st.session_state.last_batch_results = []  # 일괄 감정 결과 목록 보관용
+    st.session_state.last_batch_results = []
 if "box_open_summary" not in st.session_state:
     st.session_state.box_open_summary = None
 
@@ -406,7 +406,7 @@ with tab2:
                             st.session_state.active_cutscene = "luna"
                 st.rerun()
 
-# --- 탭 3: 수집 도감 ---
+# --- 탭 3: 수집 도감 (획득 여부 판단 조건 개선) ---
 with tab3:
     st.subheader("📖 카드 수집 앨범")
     st.caption("각 카드의 최고 등급(티어)과 정밀 평균 점수가 도감에 표시됩니다.")
@@ -416,10 +416,13 @@ with tab3:
         count = st.session_state.inventory.get(c["id"], 0)
         best_grade_info = st.session_state.card_best_grades.get(c["id"], None)
         
+        # 🔥 수정 포인트: 보유 수량이 1개 이상이거나, 감정 기록이 있다면 도감 해금!
+        is_unlocked = (count > 0) or (best_grade_info is not None)
+        
         with cols[idx % 4]:
-            if count > 0:
+            if is_unlocked:
                 st.image(c["img"], use_container_width=True)
-                st.markdown(f"**{c['name']}** (x{count})")
+                st.markdown(f"**{c['name']}** (현재 보유: {count}장)")
                 st.caption(f"등급: {c['rarity']}")
                 
                 if best_grade_info:
@@ -432,7 +435,7 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 카드 등급 감정소 (동일 카드 일괄 감정 지원) ---
+# --- 탭 4: 카드 등급 감정소 ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
     st.caption("보유 중인 동일한 카드를 **일괄로 한꺼번에 감정**하여 최고 등급에 도전해보세요! (감정 시 해당 카드는 전부 소모됩니다)")
@@ -463,7 +466,6 @@ with tab4:
                 cid = target_card["id"]
                 batch_results = []
                 
-                # 보유한 수량만큼 반복해서 감정 수행
                 for _ in range(target_count):
                     centering = random.randint(1, 10)
                     quality = random.randint(1, 10)
@@ -495,19 +497,16 @@ with tab4:
                     }
                     batch_results.append(item_info)
                     
-                    # 도감 최고 등급 갱신 비교
                     current_best = st.session_state.card_best_grades.get(cid, None)
                     if current_best is None or item_info["priority"] >= current_best["priority"]:
                         st.session_state.card_best_grades[cid] = item_info
                 
-                # 일괄 감정 결과 저장 및 인벤토리 카드 전량 소모
                 st.session_state.last_batch_results = batch_results
                 st.session_state.inventory[cid] = 0
                 del st.session_state.inventory[cid]
                 
                 st.rerun()
 
-    # --- 일괄 감정 결과 출력 영역 ---
     if st.session_state.last_batch_results:
         st.divider()
         st.markdown(f"### 🏆 **일괄 감정 결과물 총 {len(st.session_state.last_batch_results)}장**")
