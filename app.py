@@ -77,47 +77,6 @@ if "flipped_status" not in st.session_state:
 if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
 
-# --- 시세 초기화 ---
-BASE_PRICES = {
-    "C": 1,
-    "R": 100,
-    "RR": 1000,
-    "UR": 100000,
-    "SPECIAL": 1000000,
-    "AR": 5000,
-    "GX": 50000
-}
-
-if "market_prices" not in st.session_state:
-    st.session_state.market_prices = {}
-if "prev_prices" not in st.session_state:
-    st.session_state.prev_prices = {}
-
-for c in CARD_DATABASE:
-    cid = c["id"]
-    default_price = BASE_PRICES.get(c["rarity"], 100)
-    if cid not in st.session_state.market_prices:
-        st.session_state.market_prices[cid] = default_price
-    if cid not in st.session_state.prev_prices:
-        st.session_state.prev_prices[cid] = default_price
-
-if "last_price_update" not in st.session_state:
-    st.session_state.last_price_update = time.time()
-
-# 10초마다 '현재 가격'을 기준으로 -100% ~ +100% 변동
-current_time = time.time()
-if current_time - st.session_state.last_price_update > 10:
-    for c in CARD_DATABASE:
-        cid = c["id"]
-        current_p = st.session_state.market_prices.get(cid, 100)
-        st.session_state.prev_prices[cid] = current_p
-        
-        fluctuation = random.uniform(-1.0, 1.0)
-        new_price = int(current_p * (1 + fluctuation))
-        st.session_state.market_prices[cid] = max(1, new_price)
-        
-    st.session_state.last_price_update = current_time
-
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
     rand = random.random()
@@ -165,7 +124,6 @@ def open_pack_from_bag(pack_type="normal"):
         st.session_state.stats["cards"] += 1
         st.session_state.inventory[card["id"]] = st.session_state.inventory.get(card["id"], 0) + 1
         
-        # 컷씬은 오직 SPECIAL(특일) 또는 UR 등급일 때만 발동하도록 변경 (AR 제외)
         if card["rarity"] in ["SPECIAL", "UR"]:
             has_special = True
             
@@ -219,7 +177,7 @@ with st.sidebar:
 
 # --- 메인 화면 ---
 st.title("🎴 포켓몬 카드팩 시뮬레이터")
-tab1, tab2, tab3, tab4 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 개봉", "📖 수집 도감", "📈 실시간 시세"])
+tab1, tab2, tab3 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 개봉", "📖 수집 도감"])
 
 # --- 탭 1: 상점 ---
 with tab1:
@@ -258,7 +216,6 @@ with tab1:
                         box["bought"] = True
                         
                         if is_promo:
-                            st.balloons()
                             st.toast("✨ 대박! 프로모 팩을 획득하여 가방에 담았습니다!", icon="🎉")
                         else:
                             st.toast("☀️ 일반 팩을 획득하여 가방에 담았습니다!", icon="📦")
@@ -283,9 +240,7 @@ with tab2:
         st.write(f"보유 수량: **{st.session_state.pack_inventory['normal']}개**")
         
         if st.button("✂️ 일반 팩 개봉하기 (7장)", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
-            has_sp = open_pack_from_bag("normal")
-            if has_sp:
-                st.balloons()
+            open_pack_from_bag("normal")
             st.rerun()
 
     with col_p2:
@@ -297,14 +252,11 @@ with tab2:
         st.write(f"보유 수량: **{st.session_state.pack_inventory['promo']}개**")
         
         if st.button("✂️ 프로모 팩 개봉하기 (1장)", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
-            has_sp = open_pack_from_bag("promo")
-            if has_sp:
-                st.balloons()
+            open_pack_from_bag("promo")
             st.rerun()
 
     st.divider()
 
-    # 컷씬 재생 영역 (오직 특일 및 UR 카드에만 반응)
     if st.session_state.active_cutscene == "sol":
         st.markdown("### 🎬 ✨ **SOLROCK CUTSCENE (솔록 컷씬)** ✨")
         try:
@@ -335,9 +287,7 @@ with tab2:
                     
                     if st.button(f"뒤집기 #{idx+1}", key=f"card_btn_{idx}", use_container_width=True):
                         st.session_state.flipped_status[idx] = True
-                        # 특일(SPECIAL) 또는 UR 등급일 때만 컷씬 트리거 (AR 제외)
                         if card["rarity"] in ["SPECIAL", "UR"]:
-                            st.balloons()
                             if "솔록" in card["name"]:
                                 st.session_state.active_cutscene = "sol"
                             elif "루나톤" in card["name"]:
@@ -383,34 +333,3 @@ with tab3:
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
-
-# --- 탭 4: 실시간 시세 ---
-with tab4:
-    st.subheader("📈 카드 실시간 시세 거래소")
-    st.caption("⏱️ 10초마다 직전 가격 대비 -100% ~ +100% 범위에서 업다운 변동이 일어납니다!")
-    
-    cols = st.columns(3)
-    for idx, c in enumerate(CARD_DATABASE):
-        cid = c["id"]
-        current_p = st.session_state.market_prices.get(cid, 100)
-        prev_p = st.session_state.prev_prices.get(cid, current_p)
-        
-        if prev_p > 0:
-            diff_rate = ((current_p - prev_p) / prev_p) * 100
-        else:
-            diff_rate = 0.0
-        
-        with cols[idx % 3]:
-            st.image(c["img"], use_container_width=True)
-            st.markdown(f"**{c['name']}**")
-            st.caption(f"등급: {c['rarity']}")
-            st.markdown(f"💰 현재 시세: **{current_p:,}원**")
-            if diff_rate >= 0:
-                st.markdown(f"📈 직전 대비: :green[**+{diff_rate:.1f}%**]")
-            else:
-                st.markdown(f"📉 직전 대비: :red[**{diff_rate:.1f}%**]")
-            st.divider()
-
-# --- 10초마다 자동 백그라운드 갱신 트리거 ---
-time.sleep(1)
-st.rerun()
