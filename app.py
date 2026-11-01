@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 카드 데이터베이스 (캐스풍 및 안정적인 특일 카드 이미지 반영) ---
+# --- 카드 데이터베이스 (업로드한 실제 이미지 파일명과 매칭) ---
 CARD_DATABASE = [
     # C (Common)
     {"id": "sm1", "name": "캐스풍 (태양)", "rarity": "C", "type": "🔥 불꽃", "hp": 70, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/351-sunny.png", "desc": "강렬한 햇빛을 받아 불꽃 타입으로 형태가 변한 포켓몬."},
@@ -36,14 +36,14 @@ CARD_DATABASE = [
     {"id": "sm-ur2", "name": "네크로즈마 (새벽의 날개)", "rarity": "UR", "type": "🔮 초", "hp": 220, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/800-dawn-wings.png", "desc": "루나아라의 달빛 에너지를 집어삼킨 울트라 비스트"},
     {"id": "sm-ur3", "name": "칠색조 V", "rarity": "UR", "type": "🔥 불꽃", "hp": 230, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/250.png", "desc": "무지갯빛 날개로 하늘을 가르며 일곱 빛깔을 뿌린다"},
     
-    # SPECIAL ART (SAR - 0.0001% / 솔록 V, 루나톤 V)
+    # SPECIAL ART (SAR - 업로드하신 파일 이름 매칭)
     {
         "id": "sm13", 
         "name": "솔록 V (특일)", 
         "rarity": "SPECIAL", 
         "type": "🔮 초", 
         "hp": 210, 
-        "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/338.png",
+        "img": "file_00000000ad388206a3a6a269b5b4726d.png",  # 솔록 V 이미지 파일명
         "desc": "상대의 포켓몬 전원에게 각각 10데미지를 준다. (Illus. Siu)"
     },
     {
@@ -52,7 +52,7 @@ CARD_DATABASE = [
         "rarity": "SPECIAL", 
         "type": "🔮 초", 
         "hp": 210, 
-        "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/337.png",
+        "img": "Screenshot_20261101_144113_ChatGPT.jpg",  # 루나톤 V 이미지 파일명
         "desc": "상대의 배틀 포켓몬을 혼란시킨다. (Illus. Siu)"
     }
 ]
