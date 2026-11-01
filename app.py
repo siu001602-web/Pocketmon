@@ -332,7 +332,7 @@ with tab2:
                             st.session_state.active_cutscene = "luna"
                 st.rerun()
 
-# --- 탭 3: 수집 도감 (티어 및 평균 점수 숫자 표시) ---
+# --- 탭 3: 수집 도감 ---
 with tab3:
     st.subheader("📖 카드 수집 앨범")
     st.caption("각 카드의 최고 등급(티어)과 정밀 평균 점수가 도감에 표시됩니다.")
@@ -358,24 +358,20 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 카드 등급 감정소 ---
+# --- 탭 4: 카드 등급 감정소 (보유 중인 카드라면 언제든 감정 가능) ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
-    st.caption("보유 중인 카드 중 아직 감정받지 않은 카드만 의뢰할 수 있습니다! (감정 시 최고 등급 카드만 남고 나머지는 자동 폐기됩니다)")
+    st.caption("보유 중인 카드를 감정에 맡겨 더 높은 등급에 도전해보세요! (감정 시 최고 등급 카드만 남고 나머지는 자동 정돈됩니다)")
     
-    ungraded_cards = []
-    for c in CARD_DATABASE:
-        owned = st.session_state.inventory.get(c["id"], 0)
-        has_best = c["id"] in st.session_state.card_best_grades
-        if owned > 0 and not has_best:
-            ungraded_cards.append(c)
+    # 보유 수량이 1개 이상인 카드면 언제든 감정 가능하도록 수정
+    available_cards = [c for c in CARD_DATABASE if st.session_state.inventory.get(c["id"], 0) > 0]
     
-    if not ungraded_cards:
-        st.info("💡 감정 가능한 카드가 없습니다. (모든 보유 카드의 최고 등급이 이미 등록되었거나 카드가 부족합니다. 상점에서 팩을 더 까보세요!)")
+    if not available_cards:
+        st.info("💡 감정할 수 있는 카드가 없습니다. 상점에서 팩을 까서 카드를 먼저 모아주세요!")
     else:
         card_options = {
             f"{c['name']} (보유: {st.session_state.inventory.get(c['id'], 0)}장)": c 
-            for c in ungraded_cards
+            for c in available_cards
         }
         selected_label = st.selectbox("감정 의뢰할 카드를 선택하세요", list(card_options.keys()))
         target_card = card_options[selected_label]
@@ -424,10 +420,12 @@ with tab4:
                     **new_grade_info
                 }
                 
+                # 기존 최고 등급과 비교하여 더 높거나 같으면 갱신
                 current_best = st.session_state.card_best_grades.get(cid, None)
-                if current_best is None or new_grade_info["priority"] > current_best["priority"]:
+                if current_best is None or new_grade_info["priority"] >= current_best["priority"]:
                     st.session_state.card_best_grades[cid] = new_grade_info
                 
+                # 최고 등급 카드 1장만 남기고 인벤토리 수량 정리
                 st.session_state.inventory[cid] = 1
                 st.rerun()
 
@@ -448,4 +446,4 @@ with tab4:
                 f"• 🛡️ 코팅: **{res['coating']}점** | "
                 f"• 🔍 자국: **{res['scratch']}점**"
             )
-            st.success("✅ 최고 등급 카드가 수집 도감에 안전하게 보관되었으며, 나머지 여분 카드는 정리되었습니다!")
+            st.success("✅ 감정이 완료되었으며, 최고 등급 카드가 수집 도감에 안전하게 보관되었습니다!")
