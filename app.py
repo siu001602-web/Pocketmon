@@ -64,7 +64,7 @@ if "inventory" not in st.session_state:
 if "pack_inventory" not in st.session_state:
     st.session_state.pack_inventory = {"normal": 0, "promo": 0}
 if "box_inventory" not in st.session_state:
-    st.session_state.box_inventory = {"normal": 0, "promo": 0}  # 부스터 박스 보유량
+    st.session_state.box_inventory = {"normal": 0, "promo": 0}
 if "stats" not in st.session_state:
     st.session_state.stats = {"packs": 0, "cards": 0, "special": 0}
 if "shop_boxes" not in st.session_state:
@@ -73,6 +73,8 @@ if "current_pack" not in st.session_state:
     st.session_state.current_pack = []
 if "current_pack_type" not in st.session_state:
     st.session_state.current_pack_type = None
+if "current_pack_img" not in st.session_state:
+    st.session_state.current_pack_img = None  # 개봉된 팩 이미지 보관
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = []
 if "active_cutscene" not in st.session_state:
@@ -134,6 +136,7 @@ def open_pack_from_bag(pack_type="normal"):
     st.session_state.pack_inventory[pack_type] -= 1
     st.session_state.stats["packs"] += 1
     st.session_state.current_pack_type = "태양의 순환 프로모 팩" if is_promo else "태양의 순환 일반 팩"
+    st.session_state.current_pack_img = "file_00000000de388206bbea5cdf416bbe01.png" if is_promo else "file_0000000056108206b69dcbce0d79c3bb.png"
     
     card_count = 1 if is_promo else 7
     new_cards = []
@@ -268,7 +271,6 @@ with tab1:
                         st.info("상자 이미지")
                     
                     if st.button(f"🛒 구역 #{idx + 1} 구매하기", key=f"buy_box_{idx}", use_container_width=True):
-                        # 1% 확률로 부스터 박스 획득!
                         is_booster_box = (random.random() < 0.01)
                         
                         if is_booster_box:
@@ -296,6 +298,10 @@ with tab2:
     col_p1, col_p2 = st.columns(2)
     with col_p1:
         st.markdown("### ☀️ 태양의 순환 (일반 팩)")
+        try:
+            st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
+        except:
+            st.info("일반 팩 이미지")
         st.write(f"보유 팩: **{st.session_state.pack_inventory['normal']}개** | 보유 박스: **{st.session_state.box_inventory['normal']}개**")
         
         if st.button("✂️ 일반 팩 1개 개봉 (7장)", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
@@ -308,6 +314,10 @@ with tab2:
 
     with col_p2:
         st.markdown("### ✨ 태양의 순환 (프로모 팩)")
+        try:
+            st.image("file_00000000de388206bbea5cdf416bbe01.png", use_container_width=True)
+        except:
+            st.info("프로모 팩 이미지")
         st.write(f"보유 팩: **{st.session_state.pack_inventory['promo']}개** | 보유 박스: **{st.session_state.box_inventory['promo']}개**")
         
         if st.button("✂️ 프로모 팩 1개 개봉 (1장)", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
@@ -341,10 +351,19 @@ with tab2:
         except:
             st.info("📹 루나톤 컷씬 파일(2026-11-01-201120.mp4)을 찾을 수 없습니다.")
 
+    # --- 개봉된 팩 포장지 이미지와 함께 카드 출력 ---
     if st.session_state.current_pack:
-        st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type} ({len(st.session_state.current_pack)}장)")
-        st.caption("뒷면 이미지를 클릭하여 카드를 하나씩 뒤집어보세요!")
-        
+        col_pack_img, col_pack_info = st.columns([1, 4])
+        with col_pack_img:
+            if st.session_state.current_pack_img:
+                try:
+                    st.image(st.session_state.current_pack_img, width=140)
+                except:
+                    st.info("📦 팩 이미지")
+        with col_pack_info:
+            st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type} ({len(st.session_state.current_pack)}장)")
+            st.caption("뒷면 이미지를 클릭하여 카드를 하나씩 뒤집어보세요!")
+
         cols = st.columns(len(st.session_state.current_pack))
         for idx, card in enumerate(st.session_state.current_pack):
             with cols[idx]:
