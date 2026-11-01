@@ -73,6 +73,8 @@ if "current_pack_type" not in st.session_state:
     st.session_state.current_pack_type = None
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = []
+if "show_cutscene" not in st.session_state:
+    st.session_state.show_cutscene = False
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
@@ -112,7 +114,6 @@ def open_pack_from_bag(pack_type="normal"):
     st.session_state.stats["packs"] += 1
     st.session_state.current_pack_type = "태양의 순환 프로모 팩" if is_promo else "태양의 순환 일반 팩"
     
-    # 일반 팩은 7장, 프로모 팩은 1장
     card_count = 1 if is_promo else 7
     new_cards = []
     has_special = False
@@ -129,6 +130,7 @@ def open_pack_from_bag(pack_type="normal"):
             
     st.session_state.current_pack = new_cards
     st.session_state.flipped_status = [False] * card_count
+    st.session_state.show_cutscene = False
     return has_special
 
 # --- 사이드바 ---
@@ -258,6 +260,14 @@ with tab2:
 
     st.divider()
 
+    # 솔록 컷씬 비디오 연동 영역
+    if st.session_state.show_cutscene:
+        st.markdown("### 🎬 ✨ **SOLROCK APPEARS! (솔록 컷씬)** ✨")
+        try:
+            st.video("20261101_195631209.mp4", autoplay=True)
+        except:
+            st.info("📹 컷씬 영상 파일(20261101_195631209.mp4)을 찾을 수 없습니다.")
+
     if st.session_state.current_pack:
         st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type} ({len(st.session_state.current_pack)}장)")
         st.caption("뒷면 이미지를 클릭하여 카드를 하나씩 뒤집어보세요!")
@@ -277,6 +287,7 @@ with tab2:
                         st.session_state.flipped_status[idx] = True
                         if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
                             st.balloons()
+                            st.session_state.show_cutscene = True
                         st.rerun()
                 else:
                     rarity_color = {
@@ -293,6 +304,9 @@ with tab2:
         if not all(st.session_state.flipped_status):
             if st.button("👀 전체 카드 한 번에 뒤집기", use_container_width=True):
                 st.session_state.flipped_status = [True] * len(st.session_state.current_pack)
+                for card in st.session_state.current_pack:
+                    if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
+                        st.session_state.show_cutscene = True
                 st.rerun()
 
 # --- 탭 3: 수집 도감 ---
