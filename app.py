@@ -1,6 +1,7 @@
 import streamlit as st
 import random
 import json
+import time
 
 # --- 페이지 설정 ---
 st.set_page_config(
@@ -74,12 +75,42 @@ if "current_pack_type" not in st.session_state:
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = []
 if "active_cutscene" not in st.session_state:
-    st.session_state.active_cutscene = None  # 재생할 컷씬 지정 ("sol", "luna", None)
+    st.session_state.active_cutscene = None
+
+# --- 시세 초기화 및 변동 로직 ---
+BASE_PRICES = {
+    "C": 1,
+    "R": 100,
+    "RR": 1000,
+    "UR": 100000,
+    "SPECIAL": 1000000,
+    "AR": 5000,
+    "GX": 50000
+}
+
+if "market_prices" not in st.session_state:
+    st.session_state.market_prices = {}
+    for c in CARD_DATABASE:
+        st.session_state.market_prices[c["id"]] = BASE_PRICES.get(c["rarity"], 100)
+
+if "last_price_update" not in st.session_state:
+    st.session_state.last_price_update = time.time()
+
+# 10초마다 가격 변동 (-100% ~ +100%)
+current_time = time.time()
+if current_time - st.session_state.last_price_update > 10:
+    for c in CARD_DATABASE:
+        base = BASE_PRICES.get(c["rarity"], 100)
+        # -1.0 (-100%) 에서 +1.0 (+100%) 사이의 변동률 적용
+        fluctuation = random.uniform(-1.0, 1.0)
+        new_price = int(base * (1 + fluctuation))
+        # 가격이 0원 이하로 떨어지지 않도록 보정 (최소 1원)
+        st.session_state.market_prices[c["id"]] = max(1, new_price)
+    st.session_state.last_price_update = current_time
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
     rand = random.random()
-    
     if is_promo:
         if rand < 0.02:
             pool = [c for c in CARD_DATABASE if c["rarity"] == "GX"]
@@ -175,7 +206,7 @@ with st.sidebar:
 
 # --- 메인 화면 ---
 st.title("🎴 포켓몬 카드팩 시뮬레이터")
-tab1, tab2, tab3 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 개봉", "📖 수집 도감"])
+tab1, tab2, tab3, tab4 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 개봉", "📖 수집 도감", "📈 실시간 시세"])
 
 # --- 탭 1: 상점 ---
 with tab1:
@@ -260,7 +291,6 @@ with tab2:
 
     st.divider()
 
-    # 컷씬 재생 영역 (솔록 또는 루나톤)
     if st.session_state.active_cutscene == "sol":
         st.markdown("### 🎬 ✨ **SOLROCK CUTSCENE (솔록 컷씬)** ✨")
         try:
@@ -293,13 +323,12 @@ with tab2:
                         st.session_state.flipped_status[idx] = True
                         if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
                             st.balloons()
-                            # 카드 이름에 따라 솔록/루나톤 컷씬 분기
                             if "솔록" in card["name"]:
                                 st.session_state.active_cutscene = "sol"
                             elif "루나톤" in card["name"]:
                                 st.session_state.active_cutscene = "luna"
                             else:
-                                st.session_state.active_cutscene = "sol" # 기본값
+                                st.session_state.active_cutscene = "sol"
                         st.rerun()
                 else:
                     rarity_color = {
@@ -339,3 +368,30 @@ with tab3:
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
+
+# --- 탭 4: 실시간 시세 ---
+with tab4:
+    st.subheader("📈 카드 실시간 시세 거래소")
+    st.caption("⏱️ 시세는 10초마다 -100% ~ +100% 범위에서 무작위로 변동됩니다!")
+    
+    if st.button("🔄 시세 수동 새로고침", use_container_width=True):
+        st.rerun()
+        
+    st.divider()
+    
+    cols = st.columns(3)
+    for idx, c in enumerate(CARD_DATABASE):
+        current_p = st.session_state.market_prices.get(c["id"], BASE_PRICES.get(c["rarity"], 100))
+        base_p = BASE_PRICES.get(c["rarity"], 100)
+        diff_rate = ((current_p - base_p) / base_p) * 100
+        
+        with cols[idx % 3]:
+            st.image(c["img"], use_container_width=True)
+            st.markdown(f"**{c['name']}**")
+            st.caption(f"등급: {c['rarity']}")
+            st.markdown(f"💰 현재 시세: **{current_p:,}원**")
+            if diff_rate >= 0:
+                st.markdown(f"📈 변동률: :green[**+{diff_rate:.1f}%**]")
+            else:
+                st.markdown(f"📉 변동률: :red[**{diff_rate:.1f}%**]")
+            st.divider()
