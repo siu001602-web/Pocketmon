@@ -165,9 +165,12 @@ def open_pack_from_bag(pack_type="normal"):
         st.session_state.stats["cards"] += 1
         st.session_state.inventory[card["id"]] = st.session_state.inventory.get(card["id"], 0) + 1
         
+        # 컷씬은 오직 SPECIAL(특일) 또는 UR 등급일 때만 발동하도록 변경 (AR 제외)
+        if card["rarity"] in ["SPECIAL", "UR"]:
+            has_special = True
+            
         if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
             st.session_state.stats["special"] += 1
-            has_special = True
             
     st.session_state.current_pack = new_cards
     st.session_state.flipped_status = [False] * card_count
@@ -301,6 +304,7 @@ with tab2:
 
     st.divider()
 
+    # 컷씬 재생 영역 (오직 특일 및 UR 카드에만 반응)
     if st.session_state.active_cutscene == "sol":
         st.markdown("### 🎬 ✨ **SOLROCK CUTSCENE (솔록 컷씬)** ✨")
         try:
@@ -331,7 +335,8 @@ with tab2:
                     
                     if st.button(f"뒤집기 #{idx+1}", key=f"card_btn_{idx}", use_container_width=True):
                         st.session_state.flipped_status[idx] = True
-                        if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
+                        # 특일(SPECIAL) 또는 UR 등급일 때만 컷씬 트리거 (AR 제외)
+                        if card["rarity"] in ["SPECIAL", "UR"]:
                             st.balloons()
                             if "솔록" in card["name"]:
                                 st.session_state.active_cutscene = "sol"
@@ -356,7 +361,7 @@ with tab2:
             if st.button("👀 전체 카드 한 번에 뒤집기", use_container_width=True):
                 st.session_state.flipped_status = [True] * len(st.session_state.current_pack)
                 for card in st.session_state.current_pack:
-                    if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
+                    if card["rarity"] in ["SPECIAL", "UR"]:
                         if "솔록" in card["name"]:
                             st.session_state.active_cutscene = "sol"
                         elif "루나톤" in card["name"]:
