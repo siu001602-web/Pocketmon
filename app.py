@@ -59,7 +59,7 @@ CARD_DATABASE = [
     }
 ]
 
-# --- 세션 상태 초기화 ---
+# --- 세션 상태 안전 초기화 ---
 if "inventory" not in st.session_state:
     st.session_state.inventory = {}
 if "pack_inventory" not in st.session_state:
@@ -77,7 +77,7 @@ if "flipped_status" not in st.session_state:
 if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
 
-# --- 시세 초기화 및 변동 로직 ---
+# --- 시세 초기화 ---
 BASE_PRICES = {
     "C": 1,
     "R": 100,
@@ -90,15 +90,16 @@ BASE_PRICES = {
 
 if "market_prices" not in st.session_state:
     st.session_state.market_prices = {}
-for c in CARD_DATABASE:
-    if c["id"] not in st.session_state.market_prices:
-        st.session_state.market_prices[c["id"]] = BASE_PRICES.get(c["rarity"], 100)
-
 if "prev_prices" not in st.session_state:
     st.session_state.prev_prices = {}
+
 for c in CARD_DATABASE:
-    if c["id"] not in st.session_state.prev_prices:
-        st.session_state.prev_prices[c["id"]] = BASE_PRICES.get(c["rarity"], 100)
+    cid = c["id"]
+    default_price = BASE_PRICES.get(c["rarity"], 100)
+    if cid not in st.session_state.market_prices:
+        st.session_state.market_prices[cid] = default_price
+    if cid not in st.session_state.prev_prices:
+        st.session_state.prev_prices[cid] = default_price
 
 if "last_price_update" not in st.session_state:
     st.session_state.last_price_update = time.time()
