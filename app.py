@@ -75,10 +75,22 @@ if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = []
 if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
-if "graded_history" not in st.session_state:
-    st.session_state.graded_history = []
-if "graded_counts" not in st.session_state:
-    st.session_state.graded_counts = {}  # 이미 감정받은 카드 수량 추적
+if "card_best_grades" not in st.session_state:
+    st.session_state.card_best_grades = {}  # 카드별 최고 등급 정보 저장
+
+# --- 등급 순위 매기기용 함수 (숫자가 높을수록 좋은 등급) ---
+def get_grade_priority(result_str):
+    if "Black Label" in result_str:
+        return 5
+    elif "Gem Mint" in result_str:
+        return 4
+    elif "PSA 9" in result_str:
+        return 3
+    elif "PSA 8" in result_str:
+        return 2
+    elif "Standard" in result_str:
+        return 1
+    return 0
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
@@ -152,8 +164,7 @@ with st.sidebar:
         "inventory": st.session_state.inventory,
         "pack_inventory": st.session_state.pack_inventory,
         "stats": st.session_state.stats,
-        "graded_history": st.session_state.graded_history,
-        "graded_counts": st.session_state.graded_counts
+        "card_best_grades": st.session_state.card_best_grades
     }
     st.download_button(
         label="💾 JSON 데이터 저장하기",
@@ -170,8 +181,7 @@ with st.sidebar:
             st.session_state.inventory = loaded_data.get("inventory", {})
             st.session_state.pack_inventory = loaded_data.get("pack_inventory", {"normal": 0, "promo": 0})
             st.session_state.stats = loaded_data.get("stats", {"packs": 0, "cards": 0, "special": 0})
-            st.session_state.graded_history = loaded_data.get("graded_history", [])
-            st.session_state.graded_counts = loaded_data.get("graded_counts", {})
+            st.session_state.card_best_grades = loaded_data.get("card_best_grades", {})
             st.success("데이터를 성공적으로 불러왔습니다!")
             st.rerun()
         except Exception:
@@ -320,40 +330,49 @@ with tab2:
                             st.session_state.active_cutscene = "luna"
                 st.rerun()
 
-# --- 탭 3: 수집 도감 ---
+# --- 탭 3: 수집 도감 (각 카드 최고 등급 티어 표시) ---
 with tab3:
     st.subheader("📖 카드 수집 앨범")
+    st.caption("각 카드의 최고 등급(티어)이 도감에 표시됩니다.")
+    
     cols = st.columns(4)
     for idx, c in enumerate(CARD_DATABASE):
         count = st.session_state.inventory.get(c["id"], 0)
+        best_grade_info = st.session_state.card_best_grades.get(c["id"], None)
+        
         with cols[idx % 4]:
             if count > 0:
                 st.image(c["img"], use_container_width=True)
                 st.markdown(f"**{c['name']}** (x{count})")
                 st.caption(f"등급: {c['rarity']}")
+                
+                if best_grade_info:
+                    st.markdown(f"🏆 최고 등급: **{best_grade_info['result']}**")
+                    st.caption(f"평균: {best_grade_info['avg']:.1f}점 (정밀 감정 완료)")
+                else:
+                    st.markdown("⭐ 최고 등급: **미감정 (Raw)**")
             else:
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 카드 등급 감정소 ---
+# --- 탭 4: 카드 등급 감정소 (제일 좋은 등급 제외하고 나머지 폐기) ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
-    st.caption("보유 중인 카드 중 아직 감정받지 않은 카드만 의뢰할 수 있습니다! (카드당 1회 제한)")
+    st.caption("보유 중인 카드 중 아직 감정받지 않은 카드만 의뢰할 수 있습니다! (감정 시 카드별 최고 등급 카드만 남고 나머지는 자동 폐기됩니다)")
     
-    # 이미 감정받은 수량을 제외하고, 아직 감정 가능한 남은 수량이 있는 카드만 필터링
     ungraded_cards = []
     for c in CARD_DATABASE:
         owned = st.session_state.inventory.get(c["id"], 0)
-        already_graded = st.session_state.graded_counts.get(c["id"], 0)
-        if owned - already_graded > 0:
+        has_best = c["id"] in st.session_state.card_best_grades
+        if owned > 0 and not has_best:
             ungraded_cards.append(c)
     
     if not ungraded_cards:
-        st.info("💡 감정 가능한 카드가 없습니다. (모든 보유 카드를 이미 감정했거나 카드가 부족합니다. 상점에서 팩을 더 까보세요!)")
+        st.info("💡 감정 가능한 카드가 없습니다. (모든 보유 카드의 최고 등급이 이미 등록되었거나 카드가 부족합니다. 상점에서 팩을 더 까보세요!)")
     else:
         card_options = {
-            f"{c['name']} (감정 가능: {st.session_state.inventory.get(c['id'], 0) - st.session_state.graded_counts.get(c['id'], 0)}장)": c 
+            f"{c['name']} (보유: {st.session_state.inventory.get(c['id'], 0)}장)": c 
             for c in ungraded_cards
         }
         selected_label = st.selectbox("감정 의뢰할 카드를 선택하세요", list(card_options.keys()))
@@ -368,18 +387,19 @@ with tab4:
             st.write(target_card["desc"])
             
             if st.button("🛡️ 정밀 등급 감정 시작하기", type="primary", use_container_width=True):
-                # 해당 카드의 감정 횟수 1 증가 (중복 감정 방지용)
-                st.session_state.graded_counts[target_card["id"]] = st.session_state.graded_counts.get(target_card["id"], 0) + 1
+                cid = target_card["id"]
                 
+                # 새 감정 점수 부여
                 centering = random.randint(1, 10)
                 quality = random.randint(1, 10)
                 coating = random.randint(1, 10)
                 scratch = random.randint(1, 10)
-                
                 avg_score = (centering + quality + coating + scratch) / 4.0
                 
-                if avg_score >= 9.5:
-                    grade_result = "🌟 PSA 10 (Gem Mint)"
+                if centering == 10 and quality == 10 and coating == 10 and scratch == 10:
+                    grade_result = "🖤 BGS Black Label (10 Grade)"
+                elif avg_score >= 9.9:
+                    grade_result = "🌟 Gem Mint (9.9 Grade)"
                 elif avg_score >= 8.5:
                     grade_result = "💎 PSA 9 (Mint)"
                 elif avg_score >= 7.0:
@@ -387,40 +407,25 @@ with tab4:
                 else:
                     grade_result = "📦 일반 등급 (Standard)"
                 
-                grading_data = {
-                    "card_name": target_card["name"],
-                    "img": target_card["img"],
-                    "rarity": target_card["rarity"],
+                new_grade_info = {
                     "centering": centering,
                     "quality": quality,
                     "coating": coating,
                     "scratch": scratch,
                     "avg": avg_score,
-                    "result": grade_result
+                    "result": grade_result,
+                    "priority": get_grade_priority(grade_result)
                 }
                 
-                st.session_state.graded_history.insert(0, grading_data)
-                st.success("✨ 감정이 완료되었습니다! 아래 결과를 확인하세요.")
+                # 기존 최고 등급과 비교하여 더 좋은 등급이면 갱신 (아니면 유지)
+                current_best = st.session_state.card_best_grades.get(cid, None)
+                if current_best is None or new_grade_info["priority"] > current_best["priority"]:
+                    st.session_state.card_best_grades[cid] = new_grade_info
+                    st.success(f"🎉 신기록 달성! 최고 등급인 [{grade_result}]이(가) 도감에 등록되었습니다!")
+                else:
+                    st.info(f"감정 결과: [{grade_result}] (기존 최고 기록 유지 중)")
+                
+                # 요청하신 대로 해당 카드 중 '제일 좋은 등급 카드 1장'만 남기고 나머지 수량 및 하위 카드 모두 폐기 처리
+                st.session_state.inventory[cid] = 1
+                
                 st.rerun()
-
-    st.divider()
-    st.subheader("📜 나의 감정 이력 결과물")
-    
-    if not st.session_state.graded_history:
-        st.info("아직 감정받은 카드가 없습니다.")
-    else:
-        for idx, item in enumerate(st.session_state.graded_history):
-            with st.container():
-                c1, c2 = st.columns([1, 3])
-                with c1:
-                    st.image(item["img"], use_container_width=True)
-                with c2:
-                    st.markdown(f"### **{item['card_name']}** ({item['rarity']})")
-                    st.markdown(f"🏆 판정 결과: **{item['result']}** (평균점수: `{item['avg']:.1f}점`)")
-                    st.markdown(
-                        f"• 🎯 센터링: **{item['centering']}점** | "
-                        f"• ✨ 화질: **{item['quality']}점** | "
-                        f"• 🛡️ 코팅: **{item['coating']}점** | "
-                        f"• 🔍 자국: **{item['scratch']}점**"
-                    )
-                st.divider()
