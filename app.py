@@ -77,6 +77,8 @@ if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
 if "graded_history" not in st.session_state:
     st.session_state.graded_history = []
+if "graded_counts" not in st.session_state:
+    st.session_state.graded_counts = {}  # 이미 감정받은 카드 수량 추적
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
@@ -150,7 +152,8 @@ with st.sidebar:
         "inventory": st.session_state.inventory,
         "pack_inventory": st.session_state.pack_inventory,
         "stats": st.session_state.stats,
-        "graded_history": st.session_state.graded_history
+        "graded_history": st.session_state.graded_history,
+        "graded_counts": st.session_state.graded_counts
     }
     st.download_button(
         label="💾 JSON 데이터 저장하기",
@@ -168,6 +171,7 @@ with st.sidebar:
             st.session_state.pack_inventory = loaded_data.get("pack_inventory", {"normal": 0, "promo": 0})
             st.session_state.stats = loaded_data.get("stats", {"packs": 0, "cards": 0, "special": 0})
             st.session_state.graded_history = loaded_data.get("graded_history", [])
+            st.session_state.graded_counts = loaded_data.get("graded_counts", {})
             st.success("데이터를 성공적으로 불러왔습니다!")
             st.rerun()
         except Exception:
@@ -335,14 +339,23 @@ with tab3:
 # --- 탭 4: 카드 등급 감정소 ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
-    st.caption("보유 중인 카드를 감정에 맡겨 센터링, 화질, 코팅, 자국을 10점 만점으로 평가받으세요!")
+    st.caption("보유 중인 카드 중 아직 감정받지 않은 카드만 의뢰할 수 있습니다! (카드당 1회 제한)")
     
-    owned_cards = [c for c in CARD_DATABASE if st.session_state.inventory.get(c["id"], 0) > 0]
+    # 이미 감정받은 수량을 제외하고, 아직 감정 가능한 남은 수량이 있는 카드만 필터링
+    ungraded_cards = []
+    for c in CARD_DATABASE:
+        owned = st.session_state.inventory.get(c["id"], 0)
+        already_graded = st.session_state.graded_counts.get(c["id"], 0)
+        if owned - already_graded > 0:
+            ungraded_cards.append(c)
     
-    if not owned_cards:
-        st.info("💡 감정할 수 있는 카드가 없습니다. 상점에서 팩을 까서 카드를 먼저 모아주세요!")
+    if not ungraded_cards:
+        st.info("💡 감정 가능한 카드가 없습니다. (모든 보유 카드를 이미 감정했거나 카드가 부족합니다. 상점에서 팩을 더 까보세요!)")
     else:
-        card_options = {f"{c['name']} (보유: {st.session_state.inventory.get(c['id'], 0)}장)": c for c in owned_cards}
+        card_options = {
+            f"{c['name']} (감정 가능: {st.session_state.inventory.get(c['id'], 0) - st.session_state.graded_counts.get(c['id'], 0)}장)": c 
+            for c in ungraded_cards
+        }
         selected_label = st.selectbox("감정 의뢰할 카드를 선택하세요", list(card_options.keys()))
         target_card = card_options[selected_label]
         
@@ -355,6 +368,9 @@ with tab4:
             st.write(target_card["desc"])
             
             if st.button("🛡️ 정밀 등급 감정 시작하기", type="primary", use_container_width=True):
+                # 해당 카드의 감정 횟수 1 증가 (중복 감정 방지용)
+                st.session_state.graded_counts[target_card["id"]] = st.session_state.graded_counts.get(target_card["id"], 0) + 1
+                
                 centering = random.randint(1, 10)
                 quality = random.randint(1, 10)
                 coating = random.randint(1, 10)
