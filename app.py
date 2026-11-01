@@ -293,7 +293,7 @@ with tab1:
 # --- 탭 2: 가방 및 팩 개봉 ---
 with tab2:
     st.subheader("🎒 가방에서 팩 및 부스터 박스 개봉하기")
-    st.caption("보유 중인 팩이나 부스터 박스(30팩 일괄 개봉)를 열어보세요!")
+    st.caption("팩을 30개 이상 모으면 박스로 교환하거나, 부스터 박스를 한 번에 열어보세요!")
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
@@ -302,10 +302,19 @@ with tab2:
             st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
         except:
             st.info("일반 팩 이미지")
-        st.write(f"보유 팩: **{st.session_state.pack_inventory['normal']}개** | 보유 박스: **{st.session_state.box_inventory['normal']}개**")
         
-        if st.button("✂️ 일반 팩 1개 개봉 (7장)", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
+        normal_packs = st.session_state.pack_inventory['normal']
+        st.write(f"보유 팩: **{normal_packs}개** | 보유 박스: **{st.session_state.box_inventory['normal']}개**")
+        
+        if st.button("✂️ 일반 팩 1개 개봉 (7장)", disabled=(normal_packs <= 0), use_container_width=True):
             open_pack_from_bag("normal")
+            st.rerun()
+        
+        # 🔥 일반 팩 30개 모으면 박스로 교환하는 기능 추가
+        if st.button("📦 일반 팩 30개로 부스터 박스 1개 교환하기", disabled=(normal_packs < 30), use_container_width=True):
+            st.session_state.pack_inventory['normal'] -= 30
+            st.session_state.box_inventory['normal'] += 1
+            st.success("🎉 일반 팩 30개가 부스터 박스 1개로 교환되었습니다!")
             st.rerun()
         
         if st.button("🎁 일반 부스터 박스 개봉 (30팩 일괄)", disabled=(st.session_state.box_inventory['normal'] <= 0), use_container_width=True):
@@ -318,10 +327,19 @@ with tab2:
             st.image("file_00000000de388206bbea5cdf416bbe01.png", use_container_width=True)
         except:
             st.info("프로모 팩 이미지")
-        st.write(f"보유 팩: **{st.session_state.pack_inventory['promo']}개** | 보유 박스: **{st.session_state.box_inventory['promo']}개**")
         
-        if st.button("✂️ 프로모 팩 1개 개봉 (1장)", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
+        promo_packs = st.session_state.pack_inventory['promo']
+        st.write(f"보유 팩: **{promo_packs}개** | 보유 박스: **{st.session_state.box_inventory['promo']}개**")
+        
+        if st.button("✂️ 프로모 팩 1개 개봉 (1장)", disabled=(promo_packs <= 0), use_container_width=True):
             open_pack_from_bag("promo")
+            st.rerun()
+
+        # 🔥 프로모 팩 30개 모으면 박스로 교환하는 기능 추가
+        if st.button("📦 프로모 팩 30개로 부스터 박스 1개 교환하기", disabled=(promo_packs < 30), use_container_width=True):
+            st.session_state.pack_inventory['promo'] -= 30
+            st.session_state.box_inventory['promo'] += 1
+            st.success("🎉 프로모 팩 30개가 부스터 박스 1개로 교환되었습니다!")
             st.rerun()
 
         if st.button("🎁 프로모 부스터 박스 개봉 (30팩 일괄)", disabled=(st.session_state.box_inventory['promo'] <= 0), use_container_width=True):
@@ -406,7 +424,7 @@ with tab2:
                             st.session_state.active_cutscene = "luna"
                 st.rerun()
 
-# --- 탭 3: 수집 도감 (획득 여부 판단 조건 개선) ---
+# --- 탭 3: 수집 도감 ---
 with tab3:
     st.subheader("📖 카드 수집 앨범")
     st.caption("각 카드의 최고 등급(티어)과 정밀 평균 점수가 도감에 표시됩니다.")
@@ -416,7 +434,6 @@ with tab3:
         count = st.session_state.inventory.get(c["id"], 0)
         best_grade_info = st.session_state.card_best_grades.get(c["id"], None)
         
-        # 🔥 수정 포인트: 보유 수량이 1개 이상이거나, 감정 기록이 있다면 도감 해금!
         is_unlocked = (count > 0) or (best_grade_info is not None)
         
         with cols[idx % 4]:
