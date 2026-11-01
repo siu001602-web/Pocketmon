@@ -11,14 +11,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 자동 새로고침 메타 태그 주입 (10초마다 자동 갱신) ---
-st.markdown(
-    """
-    <meta http-equiv="refresh" content="10">
-    """,
-    unsafe_allow_html=True
-)
-
 # --- 카드 데이터베이스 ---
 CARD_DATABASE = [
     # --- 일반 팩 및 기본 카드군 ---
@@ -104,7 +96,7 @@ if "market_prices" not in st.session_state:
 if "last_price_update" not in st.session_state:
     st.session_state.last_price_update = time.time()
 
-# 10초마다 가격 변동 (-100% ~ +100%)
+# 10초마다 백그라운드에서 가격만 갱신 후 조용히 재실행
 current_time = time.time()
 if current_time - st.session_state.last_price_update > 10:
     for c in CARD_DATABASE:
@@ -375,10 +367,10 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 실시간 시세 ---
+# --- 탭 4: 실시간 시세 (자동 루프 타이머 적용) ---
 with tab4:
     st.subheader("📈 카드 실시간 시세 거래소")
-    st.caption("⏱️ 시세는 10초마다 자동으로 갱신되며, -100% ~ +100% 범위에서 요동칩니다!")
+    st.caption("⏱️ 10초마다 시세가 자동으로 갱신됩니다! (다른 탭을 보거나 카드를 까는 동안에도 백그라운드에서 시간이 흘러요)")
     
     cols = st.columns(3)
     for idx, c in enumerate(CARD_DATABASE):
@@ -396,3 +388,7 @@ with tab4:
             else:
                 st.markdown(f"📉 변동률: :red[**{diff_rate:.1f}%**]")
             st.divider()
+
+# --- 10초마다 자동 백그라운드 갱신 트리거 ---
+time.sleep(1)
+st.rerun()
