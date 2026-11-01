@@ -1,7 +1,6 @@
 import streamlit as st
 import random
 import json
-import time
 
 # --- 페이지 설정 ---
 st.set_page_config(
@@ -76,6 +75,8 @@ if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = []
 if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
+if "graded_history" not in st.session_state:
+    st.session_state.graded_history = []  # 감정 결과 보관함
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
@@ -116,7 +117,6 @@ def open_pack_from_bag(pack_type="normal"):
     
     card_count = 1 if is_promo else 7
     new_cards = []
-    has_special = False
     
     for _ in range(card_count):
         card = draw_single_card(is_promo=is_promo)
@@ -124,16 +124,12 @@ def open_pack_from_bag(pack_type="normal"):
         st.session_state.stats["cards"] += 1
         st.session_state.inventory[card["id"]] = st.session_state.inventory.get(card["id"], 0) + 1
         
-        if card["rarity"] in ["SPECIAL", "UR"]:
-            has_special = True
-            
         if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
             st.session_state.stats["special"] += 1
             
     st.session_state.current_pack = new_cards
     st.session_state.flipped_status = [False] * card_count
     st.session_state.active_cutscene = None
-    return has_special
 
 # --- 사이드바 ---
 with st.sidebar:
@@ -153,7 +149,8 @@ with st.sidebar:
     save_data = {
         "inventory": st.session_state.inventory,
         "pack_inventory": st.session_state.pack_inventory,
-        "stats": st.session_state.stats
+        "stats": st.session_state.stats,
+        "graded_history": st.session_state.graded_history
     }
     st.download_button(
         label="💾 JSON 데이터 저장하기",
@@ -170,6 +167,7 @@ with st.sidebar:
             st.session_state.inventory = loaded_data.get("inventory", {})
             st.session_state.pack_inventory = loaded_data.get("pack_inventory", {"normal": 0, "promo": 0})
             st.session_state.stats = loaded_data.get("stats", {"packs": 0, "cards": 0, "special": 0})
+            st.session_state.graded_history = loaded_data.get("graded_history", [])
             st.success("데이터를 성공적으로 불러왔습니다!")
             st.rerun()
         except Exception:
@@ -177,7 +175,7 @@ with st.sidebar:
 
 # --- 메인 화면 ---
 st.title("🎴 포켓몬 카드팩 시뮬레이터")
-tab1, tab2, tab3 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 개봉", "📖 수집 도감"])
+tab1, tab2, tab3, tab4 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 개봉", "📖 수집 도감", "🔍 카드 등급 감정소"])
 
 # --- 탭 1: 상점 ---
 with tab1:
@@ -333,3 +331,82 @@ with tab3:
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
+
+# --- 탭 4: 카드 등급 감정소 ---
+with tab4:
+    st.subheader("🔍 프로페셔널 카드 등급 감정소")
+    st.caption("보유 중인 카드를 감정에 맡겨 센터링, 화질, 코팅, 자국을 10점 만점으로 평가받으세요!")
+    
+    # 획득한 카드만 선택 가능하도록 필터링
+    owned_cards = [c for c in CARD_DATABASE if st.session_state.inventory.get(c["id"], 0) > 0]
+    
+    if not owned_cards:
+        st.info("💡 감정할 수 있는 카드가 없습니다. 상점에서 팩을 까서 카드를 먼저 모아주세요!")
+    else:
+        card_options = {f"{c['name']} (보유: {st.session_state.inventory[c['id']]장})": c for c in owned_cards}
+        selected_label = st.selectbox("감정 의뢰할 카드를 선택하세요", list(card_options.keys()))
+        target_card = card_options[selected_label]
+        
+        col_prev, col_desc = st.columns([1, 2])
+        with col_prev:
+            st.image(target_card["img"], use_container_width=True)
+        with col_desc:
+            st.markdown(f"### **{target_card['name']}**")
+            st.caption(f"등급: {target_card['rarity']} | 속성: {target_card['type']}")
+            st.write(target_card["desc"])
+            
+            if st.button("🛡️ 정밀 등급 감정 시작하기", type="primary", use_container_width=True):
+                # 각각 1~10점 (각 확률 10%)
+                centering = random.randint(1, 10)
+                quality = random.randint(1, 10)
+                coating = random.randint(1, 10)
+                scratch = random.randint(1, 10)
+                
+                avg_score = (centering + quality + coating + scratch) / 4.0
+                
+                if avg_score >= 9.5:
+                    grade_result = "🌟 PSA 10 (Gem Mint)"
+                elif avg_score >= 8.5:
+                    grade_result = "💎 PSA 9 (Mint)"
+                elif avg_score >= 7.0:
+                    grade_result = "⭐ PSA 8 (Near Mint-Mint)"
+                else:
+                    grade_result = "📦 일반 등급 (Standard)"
+                
+                grading_data = {
+                    "card_name": target_card["name"],
+                    "img": target_card["img"],
+                    "rarity": target_card["rarity"],
+                    "centering": centering,
+                    "quality": quality,
+                    "coating": coating,
+                    "scratch": scratch,
+                    "avg": avg_score,
+                    "result": grade_result
+                }
+                
+                st.session_state.graded_history.insert(0, grading_data)
+                st.success("✨ 감정이 완료되었습니다! 아래 결과를 확인하세요.")
+                st.rerun()
+
+    st.divider()
+    st.subheader("📜 나의 감정 이력 결과물")
+    
+    if not st.session_state.graded_history:
+        st.info("아직 감정받은 카드가 없습니다.")
+    else:
+        for idx, item in enumerate(st.session_state.graded_history):
+            with st.container():
+                c1, c2 = st.columns([1, 3])
+                with c1:
+                    st.image(item["img"], use_container_width=True)
+                with c2:
+                    st.markdown(f"### **{item['card_name']}** ({item['rarity']})")
+                    st.markdown(f"🏆 판정 결과: **{item['result']}** (평균점수: `{item['avg']:.1f}점`)")
+                    st.markdown(
+                        f"• 🎯 센터링: **{item['centering']}점** | "
+                        f"• ✨ 화질: **{item['quality']}점** | "
+                        f"• 🛡️ 코팅: **{item['coating']}점** | "
+                        f"• 🔍 자국: **{item['scratch']}점**"
+                    )
+                st.divider()
