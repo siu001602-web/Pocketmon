@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 카드 데이터베이스 (새로 요청하신 일반 카드 2종 및 특일 카드 포함) ---
+# --- 카드 데이터베이스 ---
 CARD_DATABASE = [
     # 새로 교체된 일반 카드 2종
     {
@@ -33,7 +33,7 @@ CARD_DATABASE = [
         "desc": "태양의 열기를 담아 주변을 따뜻하게 만드는 포켓몬."
     },
     
-    # SPECIAL ART (SAR) - 기존 솔록 V / 루나톤 V 특일 카드
+    # SPECIAL ART (SAR) - 특일 카드
     {
         "id": "sm13", 
         "name": "솔록 V (특일)", 
@@ -67,7 +67,6 @@ if "flipped_status" not in st.session_state:
 # --- 가챠 확률 뽑기 로직 ---
 def draw_single_card():
     rand = random.random()
-    # 특일 카드가 희귀하게 등장하도록 설정 (필요시 확률 조정 가능)
     if rand < 0.01:
         pool = [c for c in CARD_DATABASE if c["rarity"] == "SPECIAL"]
     else:
@@ -139,7 +138,6 @@ with tab1:
     st.subheader("✂️ 태양과 달의 교차 - 부스터 팩")
     st.caption("👇 아래 팩 이미지를 터치(클릭)하면 카드가 개봉됩니다!")
     
-    # 팩 이미지 출력 및 개봉 버튼 연동
     col_img1, col_img2, col_img3 = st.columns([1, 1.5, 1])
     with col_img2:
         try:
@@ -190,10 +188,12 @@ with tab2:
         count = st.session_state.inventory.get(c["id"], 0)
         with cols[idx % 4]:
             if count > 0:
+                # 보유 중인 카드: 정상적으로 이미지와 이름 표시
                 st.image(c["img"], use_column_width=True)
                 st.markdown(f"**{c['name']}** (x{count})")
                 st.caption(f"등급: {c['rarity']}")
             else:
-                st.image(c["img"], use_column_width=True)
-                st.markdown(f"~~{c['name']}~~ (미보유)")
-                st.caption("🔒 획득 필요")
+                # 미보유 카드: 이미지를 숨기고 물음표로 대체
+                st.markdown("### ❓ 미획득 카드")
+                st.markdown("~~???~~")
+                st.caption("🔒 팩에서 획득하세요")
