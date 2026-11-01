@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 카드 데이터베이스 (업로드한 실제 이미지 파일명과 매칭) ---
+# --- 카드 데이터베이스 (실물 특일 카드 매칭) ---
 CARD_DATABASE = [
     # C (Common)
     {"id": "sm1", "name": "캐스풍 (태양)", "rarity": "C", "type": "🔥 불꽃", "hp": 70, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/351-sunny.png", "desc": "강렬한 햇빛을 받아 불꽃 타입으로 형태가 변한 포켓몬."},
@@ -36,14 +36,14 @@ CARD_DATABASE = [
     {"id": "sm-ur2", "name": "네크로즈마 (새벽의 날개)", "rarity": "UR", "type": "🔮 초", "hp": 220, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/800-dawn-wings.png", "desc": "루나아라의 달빛 에너지를 집어삼킨 울트라 비스트"},
     {"id": "sm-ur3", "name": "칠색조 V", "rarity": "UR", "type": "🔥 불꽃", "hp": 230, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/250.png", "desc": "무지갯빛 날개로 하늘을 가르며 일곱 빛깔을 뿌린다"},
     
-    # SPECIAL ART (SAR - 업로드하신 파일 이름 매칭)
+    # SPECIAL ART (SAR)
     {
         "id": "sm13", 
         "name": "솔록 V (특일)", 
         "rarity": "SPECIAL", 
         "type": "🔮 초", 
         "hp": 210, 
-        "img": "file_00000000ad388206a3a6a269b5b4726d.png",  # 솔록 V 이미지 파일명
+        "img": "file_00000000ad388206a3a6a269b5b4726d.png", 
         "desc": "상대의 포켓몬 전원에게 각각 10데미지를 준다. (Illus. Siu)"
     },
     {
@@ -52,7 +52,7 @@ CARD_DATABASE = [
         "rarity": "SPECIAL", 
         "type": "🔮 초", 
         "hp": 210, 
-        "img": "Screenshot_20261101_144113_ChatGPT.jpg",  # 루나톤 V 이미지 파일명
+        "img": "Screenshot_20261101_144113_ChatGPT.jpg", 
         "desc": "상대의 배틀 포켓몬을 혼란시킨다. (Illus. Siu)"
     }
 ]
@@ -152,6 +152,14 @@ tab1, tab2 = st.tabs(["📦 팩 개봉하기", "📖 수집 도감"])
 with tab1:
     st.subheader("✂️ 태양과 달의 교차 - 부스터 팩")
     
+    # 팩 이미지 출력 (중앙 정렬 느낌을 위해 컬럼 활용)
+    col_img1, col_img2, col_img3 = st.columns([1, 2, 1])
+    with col_img2:
+        try:
+            st.image("File_0000000056108206b69dcbce0d79c3bb.png", use_column_width=True, caption="태양의 순환 부스터 팩")
+        except:
+            st.info("팩 이미지를 업로드하면 여기에 표시됩니다.")
+
     if st.button("✂️ 카드팩 개봉하기 (5장)", type="primary", use_container_width=True):
         has_sp = open_one_pack()
         if has_sp:
