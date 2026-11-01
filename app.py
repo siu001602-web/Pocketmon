@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 카드 데이터베이스 (실물 특일 카드 매칭) ---
+# --- 카드 데이터베이스 ---
 CARD_DATABASE = [
     # C (Common)
     {"id": "sm1", "name": "캐스풍 (태양)", "rarity": "C", "type": "🔥 불꽃", "hp": 70, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/351-sunny.png", "desc": "강렬한 햇빛을 받아 불꽃 타입으로 형태가 변한 포켓몬."},
@@ -152,11 +152,11 @@ tab1, tab2 = st.tabs(["📦 팩 개봉하기", "📖 수집 도감"])
 with tab1:
     st.subheader("✂️ 태양과 달의 교차 - 부스터 팩")
     
-    # 팩 이미지 출력 (정확한 파일명 반영)
+    # 팩 이미지 출력 (정확한 소문자 파일명 반영)
     col_img1, col_img2, col_img3 = st.columns([1, 1.5, 1])
     with col_img2:
         try:
-            st.image("File_0000000056108206b69dcbce0d79c3bb.png", use_column_width=True)
+            st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_column_width=True)
         except:
             st.info("팩 이미지를 업로드해 주세요.")
 
