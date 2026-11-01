@@ -13,7 +13,6 @@ st.set_page_config(
 
 # --- 카드 데이터베이스 ---
 CARD_DATABASE = [
-    # 새로 교체된 일반 카드 2종
     {
         "id": "cm1", 
         "name": "루나톤 (일반)", 
@@ -32,8 +31,6 @@ CARD_DATABASE = [
         "img": "Screenshot_20261101_182236_NAVER.jpg", 
         "desc": "태양의 열기를 담아 주변을 따뜻하게 만드는 포켓몬."
     },
-    
-    # SPECIAL ART (SAR) - 특일 카드
     {
         "id": "sm13", 
         "name": "솔록 V (특일)", 
@@ -155,7 +152,7 @@ with tab1:
     st.divider()
     
     if st.session_state.current_pack:
-        st.markdown("### 🎴 카드를 클릭하여 하나씩 뒤집어보세요!")
+        st.markdown("### 🎴 뒷면 이미지를 클릭하여 카드를 하나씩 뒤집어보세요!")
         cols = st.columns(5)
         
         for idx, card in enumerate(st.session_state.current_pack):
@@ -163,7 +160,14 @@ with tab1:
                 is_flipped = st.session_state.flipped_status[idx]
                 
                 if not is_flipped:
-                    if st.button(f"카드 #{idx+1}\n[뒷면]", key=f"card_btn_{idx}", use_container_width=True):
+                    # 뒷면 이미지 출력
+                    try:
+                        st.image("Screenshot_20261101_181901_NAVER.jpg", use_column_width=True)
+                    except:
+                        st.write(f"카드 #{idx+1} [뒷면]")
+                    
+                    # 뒷면 이미지 아래에 배치된 뒤집기 버튼
+                    if st.button(f"뒤집기 #{idx+1}", key=f"card_btn_{idx}", use_container_width=True):
                         st.session_state.flipped_status[idx] = True
                         if card["rarity"] == "SPECIAL":
                             st.balloons()
@@ -188,12 +192,10 @@ with tab2:
         count = st.session_state.inventory.get(c["id"], 0)
         with cols[idx % 4]:
             if count > 0:
-                # 보유 중인 카드: 정상적으로 이미지와 이름 표시
                 st.image(c["img"], use_column_width=True)
                 st.markdown(f"**{c['name']}** (x{count})")
                 st.caption(f"등급: {c['rarity']}")
             else:
-                # 미보유 카드: 이미지를 숨기고 물음표로 대체
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
