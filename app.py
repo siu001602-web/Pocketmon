@@ -74,15 +74,15 @@ if "current_pack" not in st.session_state:
 if "current_pack_type" not in st.session_state:
     st.session_state.current_pack_type = None
 if "current_pack_img" not in st.session_state:
-    st.session_state.current_pack_img = None  # 개봉된 팩 이미지 보관
+    st.session_state.current_pack_img = None
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = []
 if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
 if "card_best_grades" not in st.session_state:
     st.session_state.card_best_grades = {}
-if "last_grading_result" not in st.session_state:
-    st.session_state.last_grading_result = None
+if "last_batch_results" not in st.session_state:
+    st.session_state.last_batch_results = []  # 일괄 감정 결과 목록 보관용
 if "box_open_summary" not in st.session_state:
     st.session_state.box_open_summary = None
 
@@ -330,7 +330,6 @@ with tab2:
 
     st.divider()
 
-    # --- 부스터 박스 일괄 개봉 결과 요약 ---
     if st.session_state.box_open_summary:
         summary = st.session_state.box_open_summary
         st.success(f"🎁 **[{summary['type']}]** 개봉 완료! (총 {summary['packs']}팩 일괄 개봉)")
@@ -351,7 +350,6 @@ with tab2:
         except:
             st.info("📹 루나톤 컷씬 파일(2026-11-01-201120.mp4)을 찾을 수 없습니다.")
 
-    # --- 개봉된 팩 포장지 이미지와 함께 카드 출력 ---
     if st.session_state.current_pack:
         col_pack_img, col_pack_info = st.columns([1, 4])
         with col_pack_img:
@@ -434,10 +432,10 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 카드 등급 감정소 ---
+# --- 탭 4: 카드 등급 감정소 (동일 카드 일괄 감정 지원) ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
-    st.caption("보유 중인 카드를 감정에 맡겨 더 높은 등급에 도전해보세요! (감정 시 해당 카드는 소모되어 사라집니다)")
+    st.caption("보유 중인 동일한 카드를 **일괄로 한꺼번에 감정**하여 최고 등급에 도전해보세요! (감정 시 해당 카드는 전부 소모됩니다)")
     
     available_cards = [c for c in CARD_DATABASE if st.session_state.inventory.get(c["id"], 0) > 0]
     
@@ -448,8 +446,9 @@ with tab4:
             f"{c['name']} (보유: {st.session_state.inventory.get(c['id'], 0)}장)": c 
             for c in available_cards
         }
-        selected_label = st.selectbox("감정 의뢰할 카드를 선택하세요", list(card_options.keys()))
+        selected_label = st.selectbox("일괄 감정 의뢰할 카드를 선택하세요", list(card_options.keys()))
         target_card = card_options[selected_label]
+        target_count = st.session_state.inventory.get(target_card["id"], 0)
         
         col_prev, col_desc = st.columns([1, 2])
         with col_prev:
@@ -458,68 +457,74 @@ with tab4:
             st.markdown(f"### **{target_card['name']}**")
             st.caption(f"등급: {target_card['rarity']} | 속성: {target_card['type']}")
             st.write(target_card["desc"])
+            st.write(f"📦 현재 보유 수량: **{target_count}장** (일괄 감정 시 전부 소모됩니다)")
             
-            if st.button("🛡️ 정밀 등급 감정 시작하기", type="primary", use_container_width=True):
+            if st.button(f"🛡️ 보유 중인 {target_count}장 일괄 정밀 감정 시작하기", type="primary", use_container_width=True):
                 cid = target_card["id"]
+                batch_results = []
                 
-                centering = random.randint(1, 10)
-                quality = random.randint(1, 10)
-                coating = random.randint(1, 10)
-                scratch = random.randint(1, 10)
-                avg_score = (centering + quality + coating + scratch) / 4.0
+                # 보유한 수량만큼 반복해서 감정 수행
+                for _ in range(target_count):
+                    centering = random.randint(1, 10)
+                    quality = random.randint(1, 10)
+                    coating = random.randint(1, 10)
+                    scratch = random.randint(1, 10)
+                    avg_score = (centering + quality + coating + scratch) / 4.0
+                    
+                    if centering == 10 and quality == 10 and coating == 10 and scratch == 10:
+                        grade_result = "🖤 BGS Black Label (10 Grade)"
+                    elif avg_score >= 9.9:
+                        grade_result = "🌟 Gem Mint (9.9 Grade)"
+                    elif avg_score >= 8.5:
+                        grade_result = "💎 PSA 9 (Mint)"
+                    elif avg_score >= 7.0:
+                        grade_result = "⭐ PSA 8 (Near Mint-Mint)"
+                    else:
+                        grade_result = "📦 일반 등급 (Standard)"
+                    
+                    item_info = {
+                        "card_name": target_card["name"],
+                        "img": target_card["img"],
+                        "centering": centering,
+                        "quality": quality,
+                        "coating": coating,
+                        "scratch": scratch,
+                        "avg": avg_score,
+                        "result": grade_result,
+                        "priority": get_grade_priority(grade_result)
+                    }
+                    batch_results.append(item_info)
+                    
+                    # 도감 최고 등급 갱신 비교
+                    current_best = st.session_state.card_best_grades.get(cid, None)
+                    if current_best is None or item_info["priority"] >= current_best["priority"]:
+                        st.session_state.card_best_grades[cid] = item_info
                 
-                if centering == 10 and quality == 10 and coating == 10 and scratch == 10:
-                    grade_result = "🖤 BGS Black Label (10 Grade)"
-                elif avg_score >= 9.9:
-                    grade_result = "🌟 Gem Mint (9.9 Grade)"
-                elif avg_score >= 8.5:
-                    grade_result = "💎 PSA 9 (Mint)"
-                elif avg_score >= 7.0:
-                    grade_result = "⭐ PSA 8 (Near Mint-Mint)"
-                else:
-                    grade_result = "📦 일반 등급 (Standard)"
-                
-                new_grade_info = {
-                    "centering": centering,
-                    "quality": quality,
-                    "coating": coating,
-                    "scratch": scratch,
-                    "avg": avg_score,
-                    "result": grade_result,
-                    "priority": get_grade_priority(grade_result)
-                }
-                
-                st.session_state.last_grading_result = {
-                    "card_name": target_card["name"],
-                    "img": target_card["img"],
-                    **new_grade_info
-                }
-                
-                current_best = st.session_state.card_best_grades.get(cid, None)
-                if current_best is None or new_grade_info["priority"] >= current_best["priority"]:
-                    st.session_state.card_best_grades[cid] = new_grade_info
-                
-                st.session_state.inventory[cid] -= 1
-                if st.session_state.inventory[cid] <= 0:
-                    del st.session_state.inventory[cid]
+                # 일괄 감정 결과 저장 및 인벤토리 카드 전량 소모
+                st.session_state.last_batch_results = batch_results
+                st.session_state.inventory[cid] = 0
+                del st.session_state.inventory[cid]
                 
                 st.rerun()
 
-    if st.session_state.last_grading_result:
-        res = st.session_state.last_grading_result
+    # --- 일괄 감정 결과 출력 영역 ---
+    if st.session_state.last_batch_results:
         st.divider()
-        st.markdown("### 🏆 **방금 완료된 감정 결과**")
+        st.markdown(f"### 🏆 **일괄 감정 결과물 총 {len(st.session_state.last_batch_results)}장**")
         
-        res_col1, res_col2 = st.columns([1, 3])
-        with res_col1:
-            st.image(res["img"], use_container_width=True)
-        with res_col2:
-            st.markdown(f"#### **{res['card_name']}**")
-            st.markdown(f"✨ 판정 등급: **{res['result']}** (평균: `{res['avg']:.1f}점`)")
-            st.markdown(
-                f"• 🎯 센터링: **{res['centering']}점** | "
-                f"• 💎 화질: **{res['quality']}점** | "
-                f"• 🛡️ 코팅: **{res['coating']}점** | "
-                f"• 🔍 자국: **{res['scratch']}점**"
-            )
-            st.success("✅ 감정이 완료되어 의뢰한 카드가 소모되었으며, 최고 등급 기록이 도감에 반영되었습니다!")
+        for idx, res in enumerate(st.session_state.last_batch_results):
+            with st.container():
+                rc1, rc2 = st.columns([1, 4])
+                with rc1:
+                    st.image(res["img"], use_container_width=True)
+                with rc2:
+                    st.markdown(f"**#{idx+1} {res['card_name']}**")
+                    st.markdown(f"✨ 판정 등급: **{res['result']}** (평균: `{res['avg']:.1f}점`)")
+                    st.caption(
+                        f"🎯 센터링: {res['centering']}점 | "
+                        f"💎 화질: {res['quality']}점 | "
+                        f"🛡️ 코팅: {res['coating']}점 | "
+                        f"🔍 자국: {res['scratch']}점"
+                    )
+                st.divider()
+        st.success("✅ 일괄 감정이 완료되어 보유 중이던 카드가 모두 소모되었으며, 가장 높은 등급 기록이 도감에 반영되었습니다!")
