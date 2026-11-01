@@ -90,11 +90,15 @@ BASE_PRICES = {
 
 if "market_prices" not in st.session_state:
     st.session_state.market_prices = {}
+for c in CARD_DATABASE:
+    if c["id"] not in st.session_state.market_prices:
+        st.session_state.market_prices[c["id"]] = BASE_PRICES.get(c["rarity"], 100)
+
+if "prev_prices" not in st.session_state:
     st.session_state.prev_prices = {}
-    for c in CARD_DATABASE:
-        init_p = BASE_PRICES.get(c["rarity"], 100)
-        st.session_state.market_prices[c["id"]] = init_p
-        st.session_state.prev_prices[c["id"]] = init_p
+for c in CARD_DATABASE:
+    if c["id"] not in st.session_state.prev_prices:
+        st.session_state.prev_prices[c["id"]] = BASE_PRICES.get(c["rarity"], 100)
 
 if "last_price_update" not in st.session_state:
     st.session_state.last_price_update = time.time()
@@ -107,7 +111,6 @@ if current_time - st.session_state.last_price_update > 10:
         current_p = st.session_state.market_prices.get(cid, 100)
         st.session_state.prev_prices[cid] = current_p
         
-        # 현재 가격 기준으로 -100% ~ +100% 적용 (변동률 -1.0 ~ +1.0)
         fluctuation = random.uniform(-1.0, 1.0)
         new_price = int(current_p * (1 + fluctuation))
         st.session_state.market_prices[cid] = max(1, new_price)
@@ -386,7 +389,6 @@ with tab4:
         current_p = st.session_state.market_prices.get(cid, 100)
         prev_p = st.session_state.prev_prices.get(cid, current_p)
         
-        # 직전 가격 대비 변동률 계산
         if prev_p > 0:
             diff_rate = ((current_p - prev_p) / prev_p) * 100
         else:
