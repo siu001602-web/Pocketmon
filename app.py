@@ -11,6 +11,14 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# --- 자동 새로고침 메타 태그 주입 (10초마다 자동 갱신) ---
+st.markdown(
+    """
+    <meta http-equiv="refresh" content="10">
+    """,
+    unsafe_allow_html=True
+)
+
 # --- 카드 데이터베이스 ---
 CARD_DATABASE = [
     # --- 일반 팩 및 기본 카드군 ---
@@ -101,10 +109,8 @@ current_time = time.time()
 if current_time - st.session_state.last_price_update > 10:
     for c in CARD_DATABASE:
         base = BASE_PRICES.get(c["rarity"], 100)
-        # -1.0 (-100%) 에서 +1.0 (+100%) 사이의 변동률 적용
         fluctuation = random.uniform(-1.0, 1.0)
         new_price = int(base * (1 + fluctuation))
-        # 가격이 0원 이하로 떨어지지 않도록 보정 (최소 1원)
         st.session_state.market_prices[c["id"]] = max(1, new_price)
     st.session_state.last_price_update = current_time
 
@@ -372,12 +378,7 @@ with tab3:
 # --- 탭 4: 실시간 시세 ---
 with tab4:
     st.subheader("📈 카드 실시간 시세 거래소")
-    st.caption("⏱️ 시세는 10초마다 -100% ~ +100% 범위에서 무작위로 변동됩니다!")
-    
-    if st.button("🔄 시세 수동 새로고침", use_container_width=True):
-        st.rerun()
-        
-    st.divider()
+    st.caption("⏱️ 시세는 10초마다 자동으로 갱신되며, -100% ~ +100% 범위에서 요동칩니다!")
     
     cols = st.columns(3)
     for idx, c in enumerate(CARD_DATABASE):
