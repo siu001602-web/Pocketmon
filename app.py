@@ -152,13 +152,13 @@ tab1, tab2 = st.tabs(["📦 팩 개봉하기", "📖 수집 도감"])
 with tab1:
     st.subheader("✂️ 태양과 달의 교차 - 부스터 팩")
     
-    # 팩 이미지 출력 (중앙 정렬 느낌을 위해 컬럼 활용)
-    col_img1, col_img2, col_img3 = st.columns([1, 2, 1])
+    # 팩 이미지 출력 (정확한 파일명 반영)
+    col_img1, col_img2, col_img3 = st.columns([1, 1.5, 1])
     with col_img2:
         try:
-            st.image("File_0000000056108206b69dcbce0d79c3bb.png", use_column_width=True, caption="태양의 순환 부스터 팩")
+            st.image("File_0000000056108206b69dcbce0d79c3bb.png", use_column_width=True)
         except:
-            st.info("팩 이미지를 업로드하면 여기에 표시됩니다.")
+            st.info("팩 이미지를 업로드해 주세요.")
 
     if st.button("✂️ 카드팩 개봉하기 (5장)", type="primary", use_container_width=True):
         has_sp = open_one_pack()
@@ -177,7 +177,7 @@ with tab1:
                 is_flipped = st.session_state.flipped_status[idx]
                 
                 if not is_flipped:
-                    if st.button(f"카드 #{idx+1}\n[뒷면]", key=f"card_btn_{idx}", use_container_width=True):
+                    if st.button(f"팩#{idx+1}\n[뒷면]", key=f"card_btn_{idx}", use_container_width=True):
                         st.session_state.flipped_status[idx] = True
                         if card["rarity"] == "SPECIAL":
                             st.balloons()
@@ -189,9 +189,9 @@ with tab1:
                     }.get(card["rarity"], "gray")
                     
                     st.image(card["img"], use_column_width=True)
-                    st.markdown(f"**")
-                    st.caption(f"{card['type']} | {card['hp']} HP")
-                    st.markdown(f":{rarity_color}[[{card['rarity']}]]")
+                    st.markdown(f"")
+                    st.caption(f"{card['type']} | {card['hp']}HP")
+                    st.markdown(f":{rarity_color}[**]")
         
         if not all(st.session_state.flipped_status):
             if st.button("👀 전체 카드 한 번에 뒤집기", use_container_width=True):
