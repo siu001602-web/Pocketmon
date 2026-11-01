@@ -76,7 +76,7 @@ if "flipped_status" not in st.session_state:
 if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
 if "graded_history" not in st.session_state:
-    st.session_state.graded_history = []  # 감정 결과 보관함
+    st.session_state.graded_history = []
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
@@ -337,13 +337,12 @@ with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
     st.caption("보유 중인 카드를 감정에 맡겨 센터링, 화질, 코팅, 자국을 10점 만점으로 평가받으세요!")
     
-    # 획득한 카드만 선택 가능하도록 필터링
     owned_cards = [c for c in CARD_DATABASE if st.session_state.inventory.get(c["id"], 0) > 0]
     
     if not owned_cards:
         st.info("💡 감정할 수 있는 카드가 없습니다. 상점에서 팩을 까서 카드를 먼저 모아주세요!")
     else:
-        card_options = {f"{c['name']} (보유: {st.session_state.inventory[c['id']]장})": c for c in owned_cards}
+        card_options = {f"{c['name']} (보유: {st.session_state.inventory.get(c['id'], 0)}장)": c for c in owned_cards}
         selected_label = st.selectbox("감정 의뢰할 카드를 선택하세요", list(card_options.keys()))
         target_card = card_options[selected_label]
         
@@ -356,7 +355,6 @@ with tab4:
             st.write(target_card["desc"])
             
             if st.button("🛡️ 정밀 등급 감정 시작하기", type="primary", use_container_width=True):
-                # 각각 1~10점 (각 확률 10%)
                 centering = random.randint(1, 10)
                 quality = random.randint(1, 10)
                 coating = random.randint(1, 10)
