@@ -358,12 +358,11 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 카드 등급 감정소 (보유 중인 카드라면 언제든 감정 가능) ---
+# --- 탭 4: 카드 등급 감정소 ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
-    st.caption("보유 중인 카드를 감정에 맡겨 더 높은 등급에 도전해보세요! (감정 시 최고 등급 카드만 남고 나머지는 자동 정돈됩니다)")
+    st.caption("보유 중인 카드를 감정에 맡겨 더 높은 등급에 도전해보세요! (감정 시 중복 카드는 자동 정리되어 1장만 남습니다)")
     
-    # 보유 수량이 1개 이상인 카드면 언제든 감정 가능하도록 수정
     available_cards = [c for c in CARD_DATABASE if st.session_state.inventory.get(c["id"], 0) > 0]
     
     if not available_cards:
@@ -420,13 +419,14 @@ with tab4:
                     **new_grade_info
                 }
                 
-                # 기존 최고 등급과 비교하여 더 높거나 같으면 갱신
+                # 최고 등급 갱신 로직
                 current_best = st.session_state.card_best_grades.get(cid, None)
                 if current_best is None or new_grade_info["priority"] >= current_best["priority"]:
                     st.session_state.card_best_grades[cid] = new_grade_info
                 
-                # 최고 등급 카드 1장만 남기고 인벤토리 수량 정리
+                # 🔥 핵심 수정: 감정 직후 해당 카드의 보유 수량을 무조건 1장으로 강제 고정하여 중복 카드 즉시 정리
                 st.session_state.inventory[cid] = 1
+                
                 st.rerun()
 
     if st.session_state.last_grading_result:
@@ -446,4 +446,4 @@ with tab4:
                 f"• 🛡️ 코팅: **{res['coating']}점** | "
                 f"• 🔍 자국: **{res['scratch']}점**"
             )
-            st.success("✅ 감정이 완료되었으며, 최고 등급 카드가 수집 도감에 안전하게 보관되었습니다!")
+            st.success("✅ 감정이 완료되었으며, 중복 카드가 깔끔하게 정리되어 1장만 남았습니다!")
