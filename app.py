@@ -41,7 +41,7 @@ if "pack_inventory" not in st.session_state:
 if "stats" not in st.session_state:
     st.session_state.stats = {"packs": 0, "cards": 0, "special": 0}
 if "shop_boxes" not in st.session_state:
-    st.session_state.shop_boxes = None  # 처음엔 상점이 닫혀 있음 (None)
+    st.session_state.shop_boxes = None
 if "current_pack" not in st.session_state:
     st.session_state.current_pack = []
 if "current_pack_type" not in st.session_state:
@@ -53,7 +53,6 @@ if "flipped_status" not in st.session_state:
 def draw_single_card(is_promo=False):
     rand = random.random()
     
-    # 프로모 팩일 때 희귀 카드 확률 상승
     special_rate = 0.0001 if is_promo else 0.00001
     ur_rate = 0.005 if is_promo else 0.001
     
@@ -148,9 +147,7 @@ with tab1:
     st.subheader("🏪 상점")
     st.caption("버튼을 누르면 3개의 미스터리 구역 상자가 나타납니다. (각 상자당 90% 일반 팩 / 10% 프로모 팩)")
     
-    # 상점 열기 버튼
     if st.button("🎲 상점 열기 (상자 3개 불러오기)", type="primary", use_container_width=True):
-        # 3개 구역 각각에 대한 팩 종류 결정 (90% normal, 10% promo)
         boxes = []
         for _ in range(3):
             is_promo = (random.random() >= 0.90)
@@ -160,27 +157,29 @@ with tab1:
 
     st.divider()
     
-    # 상자가 열렸을 때 3개 구역 표시
     if st.session_state.shop_boxes is not None:
         st.markdown("### 🎁 3개의 상자 구역 중 원하는 것을 선택하세요!")
         cols = st.columns(3)
         
         for idx, box in enumerate(st.session_state.shop_boxes):
             with cols[idx]:
+                p_type = box["type"]
+                is_promo = (p_type == "promo")
+                
                 st.markdown(f"#### 📍 구역 #{idx + 1}")
                 if not box["bought"]:
                     try:
-                        st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
+                        # 10% 확률인 프로모 팩이면 프로모 이미지, 아니면 일반 팩 이미지 출력
+                        img_file = "file_00000000de388206bbea5cdf416bbe01.png" if is_promo else "file_0000000056108206b69dcbce0d79c3bb.png"
+                        st.image(img_file, use_container_width=True)
                     except:
                         st.info("상자 이미지")
                     
                     if st.button(f"🛒 구역 #{idx + 1} 구매하여 가방에 넣기", key=f"buy_box_{idx}", use_container_width=True):
-                        # 선택한 상자의 팩을 가방으로 이동
-                        p_type = box["type"]
                         st.session_state.pack_inventory[p_type] += 1
                         box["bought"] = True
                         
-                        if p_type == "promo":
+                        if is_promo:
                             st.balloons()
                             st.toast("✨ 대박! 프로모 팩을 획득하여 가방에 담았습니다!", icon="🎉")
                         else:
@@ -227,7 +226,6 @@ with tab2:
 
     st.divider()
 
-    # 개봉된 카드 표시 영역
     if st.session_state.current_pack:
         st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type}")
         st.caption("뒷면 이미지를 클릭하여 카드를 하나씩 뒤집어보세요!")
@@ -278,4 +276,4 @@ with tab3:
             else:
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
-                st.caption("🔒 팩에서 획득하세요")
+                st.caption("🔒 상자에서 획득하세요")
