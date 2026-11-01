@@ -11,7 +11,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 카드 데이터베이스 (레어, 더블레어, 울트라레어, 특일 포함) ---
+# --- 카드 데이터베이스 ---
 CARD_DATABASE = [
     # C (일반 카드)
     {
@@ -82,7 +82,7 @@ CARD_DATABASE = [
         "desc": "강렬한 화염의 힘을 두른 강력한 모습의 불카모스 V."
     },
 
-    # UR (울트라 레어 카드 - 특일보다 낮은 확률)
+    # UR (울트라 레어 카드 - 0.1%)
     {
         "id": "urm1", 
         "name": "솔가레오 V (울트라레어)", 
@@ -93,7 +93,7 @@ CARD_DATABASE = [
         "desc": "태양의 빛을 극한으로 끌어올린 초희귀 솔가레오."
     },
 
-    # SPECIAL ART (SAR - 특일 카드)
+    # SPECIAL ART (SAR - 특일 카드 - 0.001%)
     {
         "id": "sm13", 
         "name": "솔록 V (특일)", 
@@ -124,18 +124,18 @@ if "current_pack" not in st.session_state:
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = [False, False, False, False, False]
 
-# --- 가챠 확률 뽑기 로직 ---
+# --- 가챠 확률 뽑기 로직 (수정된 확률 적용) ---
 def draw_single_card():
     rand = random.random()
-    if rand < 0.005:  # 특일 (0.5%)
+    if rand < 0.00001:       # 특일 (0.001%)
         pool = [c for c in CARD_DATABASE if c["rarity"] == "SPECIAL"]
-    elif rand < 0.015:  # UR (1%) - 특일보다 낮거나 비슷하게 설정
+    elif rand < 0.001:       # UR (0.1%)
         pool = [c for c in CARD_DATABASE if c["rarity"] == "UR"]
-    elif rand < 0.08:  # RR (6.5%)
+    elif rand < 0.075:       # RR (6.5%)
         pool = [c for c in CARD_DATABASE if c["rarity"] == "RR"]
-    elif rand < 0.35:  # R (27%)
+    elif rand < 0.345:       # R (27%)
         pool = [c for c in CARD_DATABASE if c["rarity"] == "R"]
-    else:  # C (나머지 일반)
+    else:                    # C (65.5%)
         pool = [c for c in CARD_DATABASE if c["rarity"] == "C"]
     
     if not pool:
@@ -154,7 +154,7 @@ def open_one_pack():
         st.session_state.stats["cards"] += 1
         st.session_state.inventory[card["id"]] = st.session_state.inventory.get(card["id"], 0) + 1
         
-        if card["rarity"] == "SPECIAL" or card["rarity"] == "UR":
+        if card["rarity"] in ["SPECIAL", "UR"]:
             st.session_state.stats["special"] += 1
             has_special = True
             
