@@ -72,20 +72,18 @@ if "current_pack" not in st.session_state:
 if "current_pack_type" not in st.session_state:
     st.session_state.current_pack_type = None
 if "flipped_status" not in st.session_state:
-    st.session_state.flipped_status = [False, False, False, False, False]
+    st.session_state.flipped_status = []
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
     rand = random.random()
     
     if is_promo:
-        # 프로모 팩 전용 확률 (GX 2%, AR 98%)
         if rand < 0.02:
             pool = [c for c in CARD_DATABASE if c["rarity"] == "GX"]
         else:
             pool = [c for c in CARD_DATABASE if c["rarity"] == "AR"]
     else:
-        # 일반 팩 확률
         special_rate = 0.00001
         ur_rate = 0.001
         
@@ -114,10 +112,12 @@ def open_pack_from_bag(pack_type="normal"):
     st.session_state.stats["packs"] += 1
     st.session_state.current_pack_type = "태양의 순환 프로모 팩" if is_promo else "태양의 순환 일반 팩"
     
+    # 일반 팩은 7장, 프로모 팩은 1장
+    card_count = 1 if is_promo else 7
     new_cards = []
     has_special = False
     
-    for _ in range(5):
+    for _ in range(card_count):
         card = draw_single_card(is_promo=is_promo)
         new_cards.append(card)
         st.session_state.stats["cards"] += 1
@@ -128,7 +128,7 @@ def open_pack_from_bag(pack_type="normal"):
             has_special = True
             
     st.session_state.current_pack = new_cards
-    st.session_state.flipped_status = [False, False, False, False, False]
+    st.session_state.flipped_status = [False] * card_count
     return has_special
 
 # --- 사이드바 ---
@@ -229,28 +229,28 @@ with tab2:
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        st.markdown("### ☀️ 태양의 순환 (일반 팩)")
+        st.markdown("### ☀️ 태양의 순환 (일반 팩 - 7장)")
         try:
             st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
         except:
             st.info("일반 팩 이미지")
         st.write(f"보유 수량: **{st.session_state.pack_inventory['normal']}개**")
         
-        if st.button("✂️ 일반 팩 개봉하기", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
+        if st.button("✂️ 일반 팩 개봉하기 (7장)", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
             has_sp = open_pack_from_bag("normal")
             if has_sp:
                 st.balloons()
             st.rerun()
 
     with col_p2:
-        st.markdown("### ✨ 태양의 순환 (프로모 팩)")
+        st.markdown("### ✨ 태양의 순환 (프로모 팩 - 1장)")
         try:
             st.image("file_00000000de388206bbea5cdf416bbe01.png", use_container_width=True)
         except:
             st.info("프로모 팩 이미지")
         st.write(f"보유 수량: **{st.session_state.pack_inventory['promo']}개**")
         
-        if st.button("✂️ 프로모 팩 개봉하기", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
+        if st.button("✂️ 프로모 팩 개봉하기 (1장)", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
             has_sp = open_pack_from_bag("promo")
             if has_sp:
                 st.balloons()
@@ -259,10 +259,10 @@ with tab2:
     st.divider()
 
     if st.session_state.current_pack:
-        st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type}")
+        st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type} ({len(st.session_state.current_pack)}장)")
         st.caption("뒷면 이미지를 클릭하여 카드를 하나씩 뒤집어보세요!")
         
-        cols = st.columns(5)
+        cols = st.columns(len(st.session_state.current_pack))
         for idx, card in enumerate(st.session_state.current_pack):
             with cols[idx]:
                 is_flipped = st.session_state.flipped_status[idx]
@@ -292,7 +292,7 @@ with tab2:
         
         if not all(st.session_state.flipped_status):
             if st.button("👀 전체 카드 한 번에 뒤집기", use_container_width=True):
-                st.session_state.flipped_status = [True, True, True, True, True]
+                st.session_state.flipped_status = [True] * len(st.session_state.current_pack)
                 st.rerun()
 
 # --- 탭 3: 수집 도감 ---
