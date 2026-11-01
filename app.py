@@ -63,6 +63,8 @@ if "inventory" not in st.session_state:
     st.session_state.inventory = {}
 if "pack_inventory" not in st.session_state:
     st.session_state.pack_inventory = {"normal": 0, "promo": 0}
+if "box_inventory" not in st.session_state:
+    st.session_state.box_inventory = {"normal": 0, "promo": 0}  # 부스터 박스 보유량
 if "stats" not in st.session_state:
     st.session_state.stats = {"packs": 0, "cards": 0, "special": 0}
 if "shop_boxes" not in st.session_state:
@@ -79,6 +81,8 @@ if "card_best_grades" not in st.session_state:
     st.session_state.card_best_grades = {}
 if "last_grading_result" not in st.session_state:
     st.session_state.last_grading_result = None
+if "box_open_summary" not in st.session_state:
+    st.session_state.box_open_summary = None
 
 # --- 등급 순위 매기기용 함수 ---
 def get_grade_priority(result_str):
@@ -146,13 +150,49 @@ def open_pack_from_bag(pack_type="normal"):
     st.session_state.current_pack = new_cards
     st.session_state.flipped_status = [False] * card_count
     st.session_state.active_cutscene = None
+    st.session_state.box_open_summary = None
+
+def open_booster_box(box_type="normal"):
+    if st.session_state.box_inventory[box_type] <= 0:
+        return
+        
+    is_promo = (box_type == "promo")
+    st.session_state.box_inventory[box_type] -= 1
+    
+    total_packs = 30
+    total_cards_opened = 0
+    special_count_gained = 0
+    
+    for _ in range(total_packs):
+        st.session_state.stats["packs"] += 1
+        card_count = 1 if is_promo else 7
+        for _ in range(card_count):
+            card = draw_single_card(is_promo=is_promo)
+            total_cards_opened += 1
+            st.session_state.stats["cards"] += 1
+            st.session_state.inventory[card["id"]] = st.session_state.inventory.get(card["id"], 0) + 1
+            
+            if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
+                st.session_state.stats["special"] += 1
+                special_count_gained += 1
+                
+    st.session_state.box_open_summary = {
+        "type": "프로모 부스터 박스" if is_promo else "일반 부스터 박스",
+        "packs": total_packs,
+        "cards": total_cards_opened,
+        "special": special_count_gained
+    }
+    st.session_state.current_pack = []
+    st.session_state.active_cutscene = None
 
 # --- 사이드바 ---
 with st.sidebar:
     st.title("☀️ 태양의 순환")
-    st.markdown("### 🎒 내 가방 (보유 팩)")
+    st.markdown("### 🎒 내 가방 (보유 자산)")
     st.write(f"📦 일반 팩: **{st.session_state.pack_inventory['normal']}개**")
     st.write(f"✨ 프로모 팩: **{st.session_state.pack_inventory['promo']}개**")
+    st.write(f"🎁 일반 부스터 박스: **{st.session_state.box_inventory['normal']}개**")
+    st.write(f"🌟 프로모 부스터 박스: **{st.session_state.box_inventory['promo']}개**")
     
     st.divider()
     st.markdown("### 📊 수집 통계")
@@ -165,6 +205,7 @@ with st.sidebar:
     save_data = {
         "inventory": st.session_state.inventory,
         "pack_inventory": st.session_state.pack_inventory,
+        "box_inventory": st.session_state.box_inventory,
         "stats": st.session_state.stats,
         "card_best_grades": st.session_state.card_best_grades
     }
@@ -182,6 +223,7 @@ with st.sidebar:
             loaded_data = json.load(uploaded_file)
             st.session_state.inventory = loaded_data.get("inventory", {})
             st.session_state.pack_inventory = loaded_data.get("pack_inventory", {"normal": 0, "promo": 0})
+            st.session_state.box_inventory = loaded_data.get("box_inventory", {"normal": 0, "promo": 0})
             st.session_state.stats = loaded_data.get("stats", {"packs": 0, "cards": 0, "special": 0})
             st.session_state.card_best_grades = loaded_data.get("card_best_grades", {})
             st.success("데이터를 성공적으로 불러왔습니다!")
@@ -196,7 +238,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 �
 # --- 탭 1: 상점 ---
 with tab1:
     st.subheader("🏪 상점")
-    st.caption("버튼을 누르면 3개의 미스터리 구역 상자가 나타납니다. (90% 일반 팩 / 10% 프로모 팩)")
+    st.caption("버튼을 누르면 3개의 미스터리 구역 상자가 나타납니다. (90% 일반 팩 / 10% 프로모 팩 | **1% 확률로 팩 대신 부스터 박스 획득!**)")
     
     if st.button("🎲 상점 열기 (상자 3개 불러오기)", type="primary", use_container_width=True):
         boxes = []
@@ -225,14 +267,21 @@ with tab1:
                     except:
                         st.info("상자 이미지")
                     
-                    if st.button(f"🛒 구역 #{idx + 1} 구매하여 가방에 넣기", key=f"buy_box_{idx}", use_container_width=True):
-                        st.session_state.pack_inventory[p_type] += 1
-                        box["bought"] = True
+                    if st.button(f"🛒 구역 #{idx + 1} 구매하기", key=f"buy_box_{idx}", use_container_width=True):
+                        # 1% 확률로 부스터 박스 획득!
+                        is_booster_box = (random.random() < 0.01)
                         
-                        if is_promo:
-                            st.toast("✨ 대박! 프로모 팩을 획득하여 가방에 담았습니다!", icon="🎉")
+                        if is_booster_box:
+                            st.session_state.box_inventory[p_type] += 1
+                            box["bought"] = True
+                            st.toast(f"🎉 역대급 대박! 1% 확률의 [부스터 박스]를 획득하여 가방에 담았습니다!", icon="🎁")
                         else:
-                            st.toast("☀️ 일반 팩을 획득하여 가방에 담았습니다!", icon="📦")
+                            st.session_state.pack_inventory[p_type] += 1
+                            box["bought"] = True
+                            if is_promo:
+                                st.toast("✨ 프로모 팩을 획득하여 가방에 담았습니다!", icon="🎉")
+                            else:
+                                st.toast("☀️ 일반 팩을 획득하여 가방에 담았습니다!", icon="📦")
                         st.rerun()
                 else:
                     st.success("✅ 구매 완료 (가방에 지급됨)")
@@ -241,35 +290,43 @@ with tab1:
 
 # --- 탭 2: 가방 및 팩 개봉 ---
 with tab2:
-    st.subheader("🎒 가방에서 팩 개봉하기")
-    st.caption("가방에 보유 중인 팩을 선택하여 카드를 뜯어보세요!")
+    st.subheader("🎒 가방에서 팩 및 부스터 박스 개봉하기")
+    st.caption("보유 중인 팩이나 부스터 박스(30팩 일괄 개봉)를 열어보세요!")
     
     col_p1, col_p2 = st.columns(2)
     with col_p1:
-        st.markdown("### ☀️ 태양의 순환 (일반 팩 - 7장)")
-        try:
-            st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
-        except:
-            st.info("일반 팩 이미지")
-        st.write(f"보유 수량: **{st.session_state.pack_inventory['normal']}개**")
+        st.markdown("### ☀️ 태양의 순환 (일반 팩)")
+        st.write(f"보유 팩: **{st.session_state.pack_inventory['normal']}개** | 보유 박스: **{st.session_state.box_inventory['normal']}개**")
         
-        if st.button("✂️ 일반 팩 개봉하기 (7장)", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
+        if st.button("✂️ 일반 팩 1개 개봉 (7장)", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
             open_pack_from_bag("normal")
+            st.rerun()
+        
+        if st.button("🎁 일반 부스터 박스 개봉 (30팩 일괄)", disabled=(st.session_state.box_inventory['normal'] <= 0), use_container_width=True):
+            open_booster_box("normal")
             st.rerun()
 
     with col_p2:
-        st.markdown("### ✨ 태양의 순환 (프로모 팩 - 1장)")
-        try:
-            st.image("file_00000000de388206bbea5cdf416bbe01.png", use_container_width=True)
-        except:
-            st.info("프로모 팩 이미지")
-        st.write(f"보유 수량: **{st.session_state.pack_inventory['promo']}개**")
+        st.markdown("### ✨ 태양의 순환 (프로모 팩)")
+        st.write(f"보유 팩: **{st.session_state.pack_inventory['promo']}개** | 보유 박스: **{st.session_state.box_inventory['promo']}개**")
         
-        if st.button("✂️ 프로모 팩 개봉하기 (1장)", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
+        if st.button("✂️ 프로모 팩 1개 개봉 (1장)", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
             open_pack_from_bag("promo")
             st.rerun()
 
+        if st.button("🎁 프로모 부스터 박스 개봉 (30팩 일괄)", disabled=(st.session_state.box_inventory['promo'] <= 0), use_container_width=True):
+            open_booster_box("promo")
+            st.rerun()
+
     st.divider()
+
+    # --- 부스터 박스 일괄 개봉 결과 요약 ---
+    if st.session_state.box_open_summary:
+        summary = st.session_state.box_open_summary
+        st.success(f"🎁 **[{summary['type']}]** 개봉 완료! (총 {summary['packs']}팩 일괄 개봉)")
+        st.write(f"🃏 총 획득한 카드: **{summary['cards']}장**")
+        st.write(f"✨ 획득한 고레어(SPECIAL/UR/GX/AR) 카드: **{summary['special']}장**")
+        st.divider()
 
     if st.session_state.active_cutscene == "sol":
         st.markdown("### 🎬 ✨ **SOLROCK CUTSCENE (솔록 컷씬)** ✨")
@@ -366,7 +423,7 @@ with tab4:
     available_cards = [c for c in CARD_DATABASE if st.session_state.inventory.get(c["id"], 0) > 0]
     
     if not available_cards:
-        st.info("💡 감정할 수 있는 카드가 없습니다. 상점에서 팩을 까서 카드를 먼저 모아주세요!")
+        st.info("💡 감정할 수 있는 카드가 없습니다. 상점에서 팩을 까거나 부스터 박스를 열어 카드를 모아주세요!")
     else:
         card_options = {
             f"{c['name']} (보유: {st.session_state.inventory.get(c['id'], 0)}장)": c 
@@ -419,12 +476,10 @@ with tab4:
                     **new_grade_info
                 }
                 
-                # 최고 등급 갱신 로직
                 current_best = st.session_state.card_best_grades.get(cid, None)
                 if current_best is None or new_grade_info["priority"] >= current_best["priority"]:
                     st.session_state.card_best_grades[cid] = new_grade_info
                 
-                # 🔥 핵심 수정: 감정한 카드를 인벤토리에서 완전히 소모(1장 차감, 0이 되면 도감 수량도 0 처리)
                 st.session_state.inventory[cid] -= 1
                 if st.session_state.inventory[cid] <= 0:
                     del st.session_state.inventory[cid]
