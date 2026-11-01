@@ -78,7 +78,7 @@ if "active_cutscene" not in st.session_state:
 if "card_best_grades" not in st.session_state:
     st.session_state.card_best_grades = {}
 if "last_grading_result" not in st.session_state:
-    st.session_state.last_grading_result = None  # 방금 감정한 결과 보관용
+    st.session_state.last_grading_result = None
 
 # --- 등급 순위 매기기용 함수 ---
 def get_grade_priority(result_str):
@@ -332,10 +332,10 @@ with tab2:
                             st.session_state.active_cutscene = "luna"
                 st.rerun()
 
-# --- 탭 3: 수집 도감 ---
+# --- 탭 3: 수집 도감 (티어 및 평균 점수 숫자 표시) ---
 with tab3:
     st.subheader("📖 카드 수집 앨범")
-    st.caption("각 카드의 최고 등급(티어)이 도감에 표시됩니다.")
+    st.caption("각 카드의 최고 등급(티어)과 정밀 평균 점수가 도감에 표시됩니다.")
     
     cols = st.columns(4)
     for idx, c in enumerate(CARD_DATABASE):
@@ -350,7 +350,7 @@ with tab3:
                 
                 if best_grade_info:
                     st.markdown(f"🏆 최고 등급: **{best_grade_info['result']}**")
-                    st.caption(f"평균: {best_grade_info['avg']:.1f}점")
+                    st.caption(f"📊 정밀 평균: **{best_grade_info['avg']:.1f}점**")
                 else:
                     st.markdown("⭐ 최고 등급: **미감정 (Raw)**")
             else:
@@ -358,7 +358,7 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 카드 등급 감정소 (개별 감정 및 실시간 결과 확인) ---
+# --- 탭 4: 카드 등급 감정소 ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
     st.caption("보유 중인 카드 중 아직 감정받지 않은 카드만 의뢰할 수 있습니다! (감정 시 최고 등급 카드만 남고 나머지는 자동 폐기됩니다)")
@@ -418,7 +418,6 @@ with tab4:
                     "priority": get_grade_priority(grade_result)
                 }
                 
-                # 방금 감정한 결과 세션에 저장하여 바로 출력되도록 함
                 st.session_state.last_grading_result = {
                     "card_name": target_card["name"],
                     "img": target_card["img"],
@@ -429,11 +428,9 @@ with tab4:
                 if current_best is None or new_grade_info["priority"] > current_best["priority"]:
                     st.session_state.card_best_grades[cid] = new_grade_info
                 
-                # 해당 카드 1장만 남기고 나머지 정리
                 st.session_state.inventory[cid] = 1
                 st.rerun()
 
-    # --- 방금 감정한 결과 실시간 출력 영역 ---
     if st.session_state.last_grading_result:
         res = st.session_state.last_grading_result
         st.divider()
