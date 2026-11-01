@@ -76,9 +76,11 @@ if "flipped_status" not in st.session_state:
 if "active_cutscene" not in st.session_state:
     st.session_state.active_cutscene = None
 if "card_best_grades" not in st.session_state:
-    st.session_state.card_best_grades = {}  # 카드별 최고 등급 정보 저장
+    st.session_state.card_best_grades = {}
+if "last_grading_result" not in st.session_state:
+    st.session_state.last_grading_result = None  # 방금 감정한 결과 보관용
 
-# --- 등급 순위 매기기용 함수 (숫자가 높을수록 좋은 등급) ---
+# --- 등급 순위 매기기용 함수 ---
 def get_grade_priority(result_str):
     if "Black Label" in result_str:
         return 5
@@ -330,7 +332,7 @@ with tab2:
                             st.session_state.active_cutscene = "luna"
                 st.rerun()
 
-# --- 탭 3: 수집 도감 (각 카드 최고 등급 티어 표시) ---
+# --- 탭 3: 수집 도감 ---
 with tab3:
     st.subheader("📖 카드 수집 앨범")
     st.caption("각 카드의 최고 등급(티어)이 도감에 표시됩니다.")
@@ -348,7 +350,7 @@ with tab3:
                 
                 if best_grade_info:
                     st.markdown(f"🏆 최고 등급: **{best_grade_info['result']}**")
-                    st.caption(f"평균: {best_grade_info['avg']:.1f}점 (정밀 감정 완료)")
+                    st.caption(f"평균: {best_grade_info['avg']:.1f}점")
                 else:
                     st.markdown("⭐ 최고 등급: **미감정 (Raw)**")
             else:
@@ -356,10 +358,10 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 카드 등급 감정소 (제일 좋은 등급 제외하고 나머지 폐기) ---
+# --- 탭 4: 카드 등급 감정소 (개별 감정 및 실시간 결과 확인) ---
 with tab4:
     st.subheader("🔍 프로페셔널 카드 등급 감정소")
-    st.caption("보유 중인 카드 중 아직 감정받지 않은 카드만 의뢰할 수 있습니다! (감정 시 카드별 최고 등급 카드만 남고 나머지는 자동 폐기됩니다)")
+    st.caption("보유 중인 카드 중 아직 감정받지 않은 카드만 의뢰할 수 있습니다! (감정 시 최고 등급 카드만 남고 나머지는 자동 폐기됩니다)")
     
     ungraded_cards = []
     for c in CARD_DATABASE:
@@ -389,7 +391,6 @@ with tab4:
             if st.button("🛡️ 정밀 등급 감정 시작하기", type="primary", use_container_width=True):
                 cid = target_card["id"]
                 
-                # 새 감정 점수 부여
                 centering = random.randint(1, 10)
                 quality = random.randint(1, 10)
                 coating = random.randint(1, 10)
@@ -417,15 +418,37 @@ with tab4:
                     "priority": get_grade_priority(grade_result)
                 }
                 
-                # 기존 최고 등급과 비교하여 더 좋은 등급이면 갱신 (아니면 유지)
+                # 방금 감정한 결과 세션에 저장하여 바로 출력되도록 함
+                st.session_state.last_grading_result = {
+                    "card_name": target_card["name"],
+                    "img": target_card["img"],
+                    **new_grade_info
+                }
+                
                 current_best = st.session_state.card_best_grades.get(cid, None)
                 if current_best is None or new_grade_info["priority"] > current_best["priority"]:
                     st.session_state.card_best_grades[cid] = new_grade_info
-                    st.success(f"🎉 신기록 달성! 최고 등급인 [{grade_result}]이(가) 도감에 등록되었습니다!")
-                else:
-                    st.info(f"감정 결과: [{grade_result}] (기존 최고 기록 유지 중)")
                 
-                # 요청하신 대로 해당 카드 중 '제일 좋은 등급 카드 1장'만 남기고 나머지 수량 및 하위 카드 모두 폐기 처리
+                # 해당 카드 1장만 남기고 나머지 정리
                 st.session_state.inventory[cid] = 1
-                
                 st.rerun()
+
+    # --- 방금 감정한 결과 실시간 출력 영역 ---
+    if st.session_state.last_grading_result:
+        res = st.session_state.last_grading_result
+        st.divider()
+        st.markdown("### 🏆 **방금 완료된 감정 결과**")
+        
+        res_col1, res_col2 = st.columns([1, 3])
+        with res_col1:
+            st.image(res["img"], use_container_width=True)
+        with res_col2:
+            st.markdown(f"#### **{res['card_name']}**")
+            st.markdown(f"✨ 판정 등급: **{res['result']}** (평균: `{res['avg']:.1f}점`)")
+            st.markdown(
+                f"• 🎯 센터링: **{res['centering']}점** | "
+                f"• 💎 화질: **{res['quality']}점** | "
+                f"• 🛡️ 코팅: **{res['coating']}점** | "
+                f"• 🔍 자국: **{res['scratch']}점**"
+            )
+            st.success("✅ 최고 등급 카드가 수집 도감에 안전하게 보관되었으며, 나머지 여분 카드는 정리되었습니다!")
