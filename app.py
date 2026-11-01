@@ -73,8 +73,8 @@ if "current_pack_type" not in st.session_state:
     st.session_state.current_pack_type = None
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = []
-if "show_cutscene" not in st.session_state:
-    st.session_state.show_cutscene = False
+if "active_cutscene" not in st.session_state:
+    st.session_state.active_cutscene = None  # 재생할 컷씬 지정 ("sol", "luna", None)
 
 # --- 카드 뽑기 로직 ---
 def draw_single_card(is_promo=False):
@@ -130,7 +130,7 @@ def open_pack_from_bag(pack_type="normal"):
             
     st.session_state.current_pack = new_cards
     st.session_state.flipped_status = [False] * card_count
-    st.session_state.show_cutscene = False
+    st.session_state.active_cutscene = None
     return has_special
 
 # --- 사이드바 ---
@@ -260,13 +260,19 @@ with tab2:
 
     st.divider()
 
-    # 솔록 컷씬 비디오 연동 영역
-    if st.session_state.show_cutscene:
-        st.markdown("### 🎬 ✨ **SOLROCK APPEARS! (솔록 컷씬)** ✨")
+    # 컷씬 재생 영역 (솔록 또는 루나톤)
+    if st.session_state.active_cutscene == "sol":
+        st.markdown("### 🎬 ✨ **SOLROCK CUTSCENE (솔록 컷씬)** ✨")
         try:
             st.video("20261101_195631209.mp4", autoplay=True)
         except:
-            st.info("📹 컷씬 영상 파일(20261101_195631209.mp4)을 찾을 수 없습니다.")
+            st.info("📹 솔록 컷씬 파일(20261101_195631209.mp4)을 찾을 수 없습니다.")
+    elif st.session_state.active_cutscene == "luna":
+        st.markdown("### 🎬 ✨ **LUNATONE CUTSCENE (루나톤 컷씬)** ✨")
+        try:
+            st.video("2026-11-01-201120.mp4", autoplay=True)
+        except:
+            st.info("📹 루나톤 컷씬 파일(2026-11-01-201120.mp4)을 찾을 수 없습니다.")
 
     if st.session_state.current_pack:
         st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type} ({len(st.session_state.current_pack)}장)")
@@ -287,7 +293,13 @@ with tab2:
                         st.session_state.flipped_status[idx] = True
                         if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
                             st.balloons()
-                            st.session_state.show_cutscene = True
+                            # 카드 이름에 따라 솔록/루나톤 컷씬 분기
+                            if "솔록" in card["name"]:
+                                st.session_state.active_cutscene = "sol"
+                            elif "루나톤" in card["name"]:
+                                st.session_state.active_cutscene = "luna"
+                            else:
+                                st.session_state.active_cutscene = "sol" # 기본값
                         st.rerun()
                 else:
                     rarity_color = {
@@ -306,7 +318,10 @@ with tab2:
                 st.session_state.flipped_status = [True] * len(st.session_state.current_pack)
                 for card in st.session_state.current_pack:
                     if card["rarity"] in ["SPECIAL", "UR", "GX", "AR"]:
-                        st.session_state.show_cutscene = True
+                        if "솔록" in card["name"]:
+                            st.session_state.active_cutscene = "sol"
+                        elif "루나톤" in card["name"]:
+                            st.session_state.active_cutscene = "luna"
                 st.rerun()
 
 # --- 탭 3: 수집 도감 ---
