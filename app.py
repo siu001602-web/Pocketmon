@@ -11,9 +11,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- 카드 데이터베이스 (캐스풍 이미지 및 특일 카드 포함) ---
+# --- 카드 데이터베이스 (캐스풍 및 특일 이미지 반영) ---
 CARD_DATABASE = [
-    # C (Common) - 캐스풍 이미지 추가 반영
+    # C (Common) - 캐스풍 이미지 포함
     {"id": "sm1", "name": "캐스풍 (태양)", "rarity": "C", "type": "🔥 불꽃", "hp": 70, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/351-sunny.png", "desc": "강렬한 햇빛을 받아 불꽃 타입으로 형태가 변한 포켓몬."},
     {"id": "sm2", "name": "캐스풍 (빗물)", "rarity": "C", "type": "💧 물", "hp": 70, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/351-rainy.png", "desc": "강한 비를 받아 몸의 구조가 물 타입으로 변화한다."},
     {"id": "sm3", "name": "해루미", "rarity": "C", "type": "🌿 풀", "hp": 80, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/192.png", "desc": "태양 빛 에너지를 받아 몸에서 광채를 뿜어낸다."},
@@ -36,14 +36,14 @@ CARD_DATABASE = [
     {"id": "sm-ur2", "name": "네크로즈마 (새벽의 날개)", "rarity": "UR", "type": "🔮 초", "hp": 220, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/800-dawn-wings.png", "desc": "루나아라의 달빛 에너지를 집어삼킨 울트라 비스트"},
     {"id": "sm-ur3", "name": "칠색조 V", "rarity": "UR", "type": "🔥 불꽃", "hp": 230, "img": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/250.png", "desc": "무지갯빛 날개로 하늘을 가르며 일곱 빛깔을 뿌린다"},
     
-    # SPECIAL ART (SAR - 0.0001% / 솔록 V, 루나톤 V 실제 이미지 적용)
+    # SPECIAL ART (SAR - 0.0001% / 사용자 제공 이미지 직접 링크 반영)
     {
         "id": "sm13", 
         "name": "솔록 V (특일)", 
         "rarity": "SPECIAL", 
         "type": "🔮 초", 
         "hp": 210, 
-        "img": "https://i.ibb.co/6R3vZJ3/1000000840.png",
+        "img": "https://i.imgur.com/aT6zWNB.jpg",
         "desc": "상대의 포켓몬 전원에게 각각 10데미지를 준다. (Illus. Siu)"
     },
     {
@@ -52,7 +52,7 @@ CARD_DATABASE = [
         "rarity": "SPECIAL", 
         "type": "🔮 초", 
         "hp": 210, 
-        "img": "https://i.ibb.co/7X1vZJ4/1000000841.jpg",
+        "img": "https://i.imgur.com/gQOgpwD.jpg",
         "desc": "상대의 배틀 포켓몬을 혼란시킨다. (Illus. Siu)"
     }
 ]
@@ -152,7 +152,6 @@ tab1, tab2 = st.tabs(["📦 팩 개봉하기", "📖 수집 도감"])
 with tab1:
     st.subheader("✂️ 태양과 달의 교차 - 부스터 팩")
     
-    # 팩 까기 버튼 (1팩씩만 개봉)
     if st.button("✂️ 카드팩 개봉하기 (5장)", type="primary", use_container_width=True):
         has_sp = open_one_pack()
         if has_sp:
@@ -161,7 +160,6 @@ with tab1:
 
     st.divider()
     
-    # 카드가 생성된 경우: 직접 뒤집는 인터페이스 제공
     if st.session_state.current_pack:
         st.markdown("### 🎴 카드를 클릭하여 하나씩 뒤집어보세요!")
         cols = st.columns(5)
@@ -171,14 +169,12 @@ with tab1:
                 is_flipped = st.session_state.flipped_status[idx]
                 
                 if not is_flipped:
-                    # 뒷면 상태 (클릭하면 뒤집힘)
                     if st.button(f"카드 #{idx+1}\n[뒷면]", key=f"card_btn_{idx}", use_container_width=True):
                         st.session_state.flipped_status[idx] = True
                         if card["rarity"] == "SPECIAL":
                             st.balloons()
                         st.rerun()
                 else:
-                    # 앞면 상태 (뒤집힌 후)
                     rarity_color = {
                         "C": "gray", "R": "blue", "SR": "purple", 
                         "UR": "orange", "SPECIAL": "red"
@@ -189,7 +185,6 @@ with tab1:
                     st.caption(f"{card['type']} | {card['hp']} HP")
                     st.markdown(f":{rarity_color}[[{card['rarity']}]]")
         
-        # 전체 한 번에 뒤집기 버튼
         if not all(st.session_state.flipped_status):
             if st.button("👀 전체 카드 한 번에 뒤집기", use_container_width=True):
                 st.session_state.flipped_status = [True, True, True, True, True]
