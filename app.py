@@ -36,16 +36,18 @@ CARD_DATABASE = [
 # --- 세션 상태 초기화 ---
 if "inventory" not in st.session_state:
     st.session_state.inventory = {}
+if "pack_inventory" not in st.session_state:
+    st.session_state.pack_inventory = {"normal": 0, "promo": 0}
 if "stats" not in st.session_state:
     st.session_state.stats = {"packs": 0, "cards": 0, "special": 0}
+if "shop_boxes" not in st.session_state:
+    st.session_state.shop_boxes = None  # 처음엔 상점이 닫혀 있음 (None)
 if "current_pack" not in st.session_state:
     st.session_state.current_pack = []
 if "current_pack_type" not in st.session_state:
     st.session_state.current_pack_type = None
 if "flipped_status" not in st.session_state:
     st.session_state.flipped_status = [False, False, False, False, False]
-if "opened_boxes" not in st.session_state:
-    st.session_state.opened_boxes = [False, False, False]
 
 # --- 가챠 확률 뽑기 로직 ---
 def draw_single_card(is_promo=False):
@@ -71,18 +73,17 @@ def draw_single_card(is_promo=False):
         
     return random.choice(pool)
 
-def open_selected_box(box_index):
-    # 90% 확률로 태양의 순환(일반), 10% 확률로 프로모 팩 결정
-    rand_pack = random.random()
-    is_promo = (rand_pack >= 0.90)
-    pack_name = "태양의 순환 프로모 팩" if is_promo else "태양의 순환 팩"
+def open_pack_from_bag(pack_type="normal"):
+    if st.session_state.pack_inventory[pack_type] <= 0:
+        return False
+        
+    is_promo = (pack_type == "promo")
+    st.session_state.pack_inventory[pack_type] -= 1
+    st.session_state.stats["packs"] += 1
+    st.session_state.current_pack_type = "태양의 순환 프로모 팩" if is_promo else "태양의 순환 일반 팩"
     
     new_cards = []
     has_special = False
-    
-    st.session_state.stats["packs"] += 1
-    st.session_state.opened_boxes[box_index] = True
-    st.session_state.current_pack_type = pack_name
     
     for _ in range(5):
         card = draw_single_card(is_promo=is_promo)
@@ -96,11 +97,16 @@ def open_selected_box(box_index):
             
     st.session_state.current_pack = new_cards
     st.session_state.flipped_status = [False, False, False, False, False]
-    return is_promo, has_special
+    return has_special
 
 # --- 사이드바 ---
 with st.sidebar:
     st.title("☀️ 태양의 순환")
+    st.markdown("### 🎒 내 가방 (보유 팩)")
+    st.write(f"📦 일반 팩: **{st.session_state.pack_inventory['normal']}개**")
+    st.write(f"✨ 프로모 팩: **{st.session_state.pack_inventory['promo']}개**")
+    
+    st.divider()
     st.markdown("### 📊 수집 통계")
     st.write(f"📦 개봉한 팩 수: **{st.session_state.stats['packs']}**")
     st.write(f"🃏 전체 보유 카드: **{st.session_state.stats['cards']}**")
@@ -110,6 +116,7 @@ with st.sidebar:
     st.markdown("### 💾 데이터 관리 (Save/Load)")
     save_data = {
         "inventory": st.session_state.inventory,
+        "pack_inventory": st.session_state.pack_inventory,
         "stats": st.session_state.stats
     }
     st.download_button(
@@ -125,6 +132,7 @@ with st.sidebar:
         try:
             loaded_data = json.load(uploaded_file)
             st.session_state.inventory = loaded_data.get("inventory", {})
+            st.session_state.pack_inventory = loaded_data.get("pack_inventory", {"normal": 0, "promo": 0})
             st.session_state.stats = loaded_data.get("stats", {"packs": 0, "cards": 0, "special": 0})
             st.success("데이터를 성공적으로 불러왔습니다!")
             st.rerun()
@@ -133,46 +141,93 @@ with st.sidebar:
 
 # --- 메인 화면 ---
 st.title("🎴 포켓몬 카드팩 시뮬레이터")
-tab1, tab2 = st.tabs(["🛒 상점 및 팩 개봉", "📖 수집 도감"])
+tab1, tab2, tab3 = st.tabs(["🛒 상점 (상자 뽑기)", "🎒 가방 및 팩 개봉", "📖 수집 도감"])
 
+# --- 탭 1: 상점 ---
 with tab1:
-    st.subheader("🏪 상점 - 미스터리 박스 3종")
-    st.caption("🎁 상자 3개 중 하나를 선택하세요! (90% 일반 팩 / 10% 프로모 팩 등장)")
+    st.subheader("🏪 상점")
+    st.caption("버튼을 누르면 3개의 미스터리 구역 상자가 나타납니다. (각 상자당 90% 일반 팩 / 10% 프로모 팩)")
     
-    # 3개 상자 배치
-    box_cols = st.columns(3)
-    
-    for b_idx in range(3):
-        with box_cols[b_idx]:
-            st.markdown(f"### 📦 상자 #{b_idx + 1}")
-            is_opened = st.session_state.opened_boxes[b_idx]
-            
-            if not is_opened:
-                try:
-                    st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
-                except:
-                    st.info("상자 커버 이미지")
-                    
-                if st.button(f"🎁 상자 #{b_idx + 1} 열기", key=f"box_btn_{b_idx}", type="primary", use_container_width=True):
-                    is_promo, has_sp = open_selected_box(b_idx)
-                    if is_promo:
-                        st.balloons()
-                        st.toast("✨ 당첨! 10% 확률의 프로모 팩을 찾았습니다!", icon="🎉")
-                    if has_sp:
-                        st.snow()
-                    st.rerun()
-            else:
-                st.success("✅ 이미 개봉한 상자입니다")
-
-    if st.button("🔄 상자 3개 모두 리셋 (새로고침)", use_container_width=True):
-        st.session_state.opened_boxes = [False, False, False]
-        st.session_state.current_pack = []
-        st.session_state.current_pack_type = None
+    # 상점 열기 버튼
+    if st.button("🎲 상점 열기 (상자 3개 불러오기)", type="primary", use_container_width=True):
+        # 3개 구역 각각에 대한 팩 종류 결정 (90% normal, 10% promo)
+        boxes = []
+        for _ in range(3):
+            is_promo = (random.random() >= 0.90)
+            boxes.append({"type": "promo" if is_promo else "normal", "bought": False})
+        st.session_state.shop_boxes = boxes
         st.rerun()
 
     st.divider()
+    
+    # 상자가 열렸을 때 3개 구역 표시
+    if st.session_state.shop_boxes is not None:
+        st.markdown("### 🎁 3개의 상자 구역 중 원하는 것을 선택하세요!")
+        cols = st.columns(3)
+        
+        for idx, box in enumerate(st.session_state.shop_boxes):
+            with cols[idx]:
+                st.markdown(f"#### 📍 구역 #{idx + 1}")
+                if not box["bought"]:
+                    try:
+                        st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
+                    except:
+                        st.info("상자 이미지")
+                    
+                    if st.button(f"🛒 구역 #{idx + 1} 구매하여 가방에 넣기", key=f"buy_box_{idx}", use_container_width=True):
+                        # 선택한 상자의 팩을 가방으로 이동
+                        p_type = box["type"]
+                        st.session_state.pack_inventory[p_type] += 1
+                        box["bought"] = True
+                        
+                        if p_type == "promo":
+                            st.balloons()
+                            st.toast("✨ 대박! 프로모 팩을 획득하여 가방에 담았습니다!", icon="🎉")
+                        else:
+                            st.toast("☀️ 일반 팩을 획득하여 가방에 담았습니다!", icon="📦")
+                        st.rerun()
+                else:
+                    st.success("✅ 구매 완료 (가방에 지급됨)")
+    else:
+        st.info("💡 상점 열기 버튼을 눌러 상자 3개를 불러오세요.")
 
-    # 오픈된 카드 표시 영역
+# --- 탭 2: 가방 및 팩 개봉 ---
+with tab2:
+    st.subheader("🎒 가방에서 팩 개봉하기")
+    st.caption("가방에 보유 중인 팩을 선택하여 카드를 뜯어보세요!")
+    
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        st.markdown("### ☀️ 태양의 순환 (일반 팩)")
+        try:
+            st.image("file_0000000056108206b69dcbce0d79c3bb.png", use_container_width=True)
+        except:
+            st.info("일반 팩 이미지")
+        st.write(f"보유 수량: **{st.session_state.pack_inventory['normal']}개**")
+        
+        if st.button("✂️ 일반 팩 개봉하기", disabled=(st.session_state.pack_inventory['normal'] <= 0), use_container_width=True):
+            has_sp = open_pack_from_bag("normal")
+            if has_sp:
+                st.balloons()
+            st.rerun()
+
+    with col_p2:
+        st.markdown("### ✨ 태양의 순환 (프로모 팩)")
+        try:
+            st.image("file_00000000de388206bbea5cdf416bbe01.png", use_container_width=True)
+        except:
+            st.info("프로모 팩 이미지")
+        st.write(f"보유 수량: **{st.session_state.pack_inventory['promo']}개**")
+        
+        if st.button("✂️ 프로모 팩 개봉하기", disabled=(st.session_state.pack_inventory['promo'] <= 0), use_container_width=True):
+            has_sp = open_pack_from_bag("promo")
+            if has_sp:
+                st.balloons()
+            st.rerun()
+
+    st.divider()
+
+    # 개봉된 카드 표시 영역
     if st.session_state.current_pack:
         st.markdown(f"### 🎴 개봉된 팩: **{st.session_state.current_pack_type}")
         st.caption("뒷면 이미지를 클릭하여 카드를 하나씩 뒤집어보세요!")
@@ -209,7 +264,8 @@ with tab1:
                 st.session_state.flipped_status = [True, True, True, True, True]
                 st.rerun()
 
-with tab2:
+# --- 탭 3: 수집 도감 ---
+with tab3:
     st.subheader("📖 카드 수집 앨범")
     cols = st.columns(4)
     for idx, c in enumerate(CARD_DATABASE):
@@ -222,4 +278,4 @@ with tab2:
             else:
                 st.markdown("### ❓ 미획득 카드")
                 st.markdown("~~???~~")
-                st.caption("🔒 상자에서 획득하세요")
+                st.caption("🔒 팩에서 획득하세요")
