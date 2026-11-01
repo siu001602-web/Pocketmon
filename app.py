@@ -90,20 +90,28 @@ BASE_PRICES = {
 
 if "market_prices" not in st.session_state:
     st.session_state.market_prices = {}
+    st.session_state.prev_prices = {}
     for c in CARD_DATABASE:
-        st.session_state.market_prices[c["id"]] = BASE_PRICES.get(c["rarity"], 100)
+        init_p = BASE_PRICES.get(c["rarity"], 100)
+        st.session_state.market_prices[c["id"]] = init_p
+        st.session_state.prev_prices[c["id"]] = init_p
 
 if "last_price_update" not in st.session_state:
     st.session_state.last_price_update = time.time()
 
-# 10초마다 백그라운드에서 가격만 갱신 후 조용히 재실행
+# 10초마다 '현재 가격'을 기준으로 -100% ~ +100% 변동
 current_time = time.time()
 if current_time - st.session_state.last_price_update > 10:
     for c in CARD_DATABASE:
-        base = BASE_PRICES.get(c["rarity"], 100)
+        cid = c["id"]
+        current_p = st.session_state.market_prices.get(cid, 100)
+        st.session_state.prev_prices[cid] = current_p
+        
+        # 현재 가격 기준으로 -100% ~ +100% 적용 (변동률 -1.0 ~ +1.0)
         fluctuation = random.uniform(-1.0, 1.0)
-        new_price = int(base * (1 + fluctuation))
-        st.session_state.market_prices[c["id"]] = max(1, new_price)
+        new_price = int(current_p * (1 + fluctuation))
+        st.session_state.market_prices[cid] = max(1, new_price)
+        
     st.session_state.last_price_update = current_time
 
 # --- 카드 뽑기 로직 ---
@@ -367,16 +375,22 @@ with tab3:
                 st.markdown("~~???~~")
                 st.caption("🔒 팩에서 획득하세요")
 
-# --- 탭 4: 실시간 시세 (자동 루프 타이머 적용) ---
+# --- 탭 4: 실시간 시세 ---
 with tab4:
     st.subheader("📈 카드 실시간 시세 거래소")
-    st.caption("⏱️ 10초마다 시세가 자동으로 갱신됩니다! (다른 탭을 보거나 카드를 까는 동안에도 백그라운드에서 시간이 흘러요)")
+    st.caption("⏱️ 10초마다 직전 가격 대비 -100% ~ +100% 범위에서 업다운 변동이 일어납니다!")
     
     cols = st.columns(3)
     for idx, c in enumerate(CARD_DATABASE):
-        current_p = st.session_state.market_prices.get(c["id"], BASE_PRICES.get(c["rarity"], 100))
-        base_p = BASE_PRICES.get(c["rarity"], 100)
-        diff_rate = ((current_p - base_p) / base_p) * 100
+        cid = c["id"]
+        current_p = st.session_state.market_prices.get(cid, 100)
+        prev_p = st.session_state.prev_prices.get(cid, current_p)
+        
+        # 직전 가격 대비 변동률 계산
+        if prev_p > 0:
+            diff_rate = ((current_p - prev_p) / prev_p) * 100
+        else:
+            diff_rate = 0.0
         
         with cols[idx % 3]:
             st.image(c["img"], use_container_width=True)
@@ -384,9 +398,9 @@ with tab4:
             st.caption(f"등급: {c['rarity']}")
             st.markdown(f"💰 현재 시세: **{current_p:,}원**")
             if diff_rate >= 0:
-                st.markdown(f"📈 변동률: :green[**+{diff_rate:.1f}%**]")
+                st.markdown(f"📈 직전 대비: :green[**+{diff_rate:.1f}%**]")
             else:
-                st.markdown(f"📉 변동률: :red[**{diff_rate:.1f}%**]")
+                st.markdown(f"📉 직전 대비: :red[**{diff_rate:.1f}%**]")
             st.divider()
 
 # --- 10초마다 자동 백그라운드 갱신 트리거 ---
